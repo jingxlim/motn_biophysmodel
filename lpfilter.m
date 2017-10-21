@@ -17,6 +17,7 @@ fdata = dat(:,all(~isnan(dat)));  % remove columns with nans
 data = fdata(fdata(:,2)~=2,:);  % remove axons
 datafile = strrep(filename,'txt', 'mat');
 save(datafile,'fdata','data'); % save data to file
+
 %% Plot dendritic tree
 load(datafile) % variable name is data
 
@@ -108,7 +109,133 @@ lambda = sqrt((Rm*radius)/(Ri*2));
 constraint = length./lambda > 0.1;
 
 if find(constraint)
-    disp('Constraint is not satisfied for all dendritic segments')
+    disp('Constraint is NOT satisfied for all dendritic segments')
 else
     disp('Constraint is satisfied for all dendritic segments!')
 end
+
+%% Initialize compartmental model: construct matrix A
+
+N = size(cmprt,1);  % number of compartments
+
+% extrinsic values for compartment j
+C = @(r,dl) 2*pi*r*dl*Cm;
+gi = @(r,dl) (pi*r^2)/(dl*Ri);
+gm = @(r,dl) (2*pi*r*dl)/Rm;
+
+% initialize and construct matrix A
+A_ = zeros(N);
+
+for i=1:numel(cmprt)
+    % find daughter branches
+    ccmprt = cmprt(i);  % only 1
+    daughter{i} = find(parent == ccmprt);
+    
+    % find daughter and parent compartments
+    dcmprts = daughter{i};  % might have more than 1
+    pcmprt = parent(i);  % only 1
+    
+    % populate A matrix
+    A_(ccmprt,ccmprt) = A_(ccmprt,ccmprt)...
+                              -gm(radius(ccmprt),length(ccmprt));
+    if pcmprt~=-1
+        A_(ccmprt,ccmprt) = A_(ccmprt,ccmprt)...
+                                  -gi(radius(ccmprt),length(ccmprt));
+        A_(ccmprt,pcmprt) = A_(ccmprt,pcmprt)...
+                                  +gi(radius(ccmprt),length(ccmprt));
+    end
+                              
+    for i=1:numel(dcmprts)
+        dcmprt = dcmprts(i);
+        A_(ccmprt,ccmprt) = A_(ccmprt,ccmprt)...
+                                  - gi(radius(dcmprt),length(dcmprt));
+        A_(ccmprt,dcmprt) = A_(ccmprt,dcmprt)...
+                                  + gi(radius(dcmprt),length(dcmprt));
+    end
+end
+
+Cm_all = zeros(N,1);
+
+% calculate the membrane capacitance for each compartment
+for i=1:numel(cmprt)
+    ccmprt = cmprt(i);
+    Cm_all(i) = C(radius(ccmprt),length(ccmprt));
+end
+
+Cm_matrix = repmat(Cm_all,1,N);
+A = A_ ./ Cm_matrix;
+
+%% Initialize comparmental model: construct matrices B and U
+B = eye(N).*(1./Cm_matrix);
+
+% construct U vector
+Iapp = 1e-9;  % mA
+inj_cmprt = 517;
+U = zeros(N,1);
+U(inj_cmprt,1) = Iapp;
+
+%% Find steady state voltages
+
+V = - inv(A)*B*U;
+
+lambda = sqrt((Rm*radius)/(Ri*2));
+L = length./lambda;
+
+V_ = transpose(V);  % column vector of ss voltages over compartments
+
+%% Find location of compartments and plot steady state
+% find branch points
+u_parent = unique(parent);
+hist_parent = histc(parent(:),u_parent);
+branch_pts = u_parent(hist_parent>1);
+
+% find daughter branches
+for i=1:numel(branch_pts)
+    pbranch = branch_pts(i);
+    dbranch = find(parent==pbranch);
+    dbranches{pbranch} = dbranch;
+end
+
+branches={};
+
+% find branches
+for i=1:numel(branch_pts)
+    pbranch = branch_pts(i)
+    for j=1:numel(dbranches{pbranch})
+        dbranch = dbranches{pbranch}(j)
+        branches{size(branches,2)+1} = [pbranch,dbranch];
+        if ismember(dbranch,branch_pts)
+            continue
+        else
+            while ~ismember(dbranch,branch_pts)
+                dbranch = find(parent==dbranch)
+                branches{size(branches,2)} = [branches{size(branches,2)},dbranch];
+            end
+        end
+    end
+end
+ 
+position = {};
+X = zeros(size(cmprt));
+X(1) = 0;
+for i=1:numel(branches)
+    counter = X(branches{i}(1));
+    position{size(position,2)+1} = [counter];
+    for j=2:numel(branches{i})
+        comp = branches{i}(j);
+        counter = counter + L(comp);
+        position{size(position,2)} = [position{size(position,2)},counter];
+        X(comp)= counter;
+    end
+end
+
+figure(2); clf; hold on;
+
+for i=1:numel(branches)
+    plot(position{i},V_(branches{i}),'-');
+    % text(position{i},V_(branches{i})+0.001, cellstr(string(branches{i})),'FontSize',4);
+end
+
+xlabel('Electrontonic distance from soma'); ylabel('Steady state voltage [mV]');
+title('Steady-state voltage along cables: Injection into branch '+string(inj_cmprt));
+saveas(gcf, 'ss_voltage.png');
