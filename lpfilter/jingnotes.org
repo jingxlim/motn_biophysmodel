@@ -1,0 +1,42 @@
+#+STARTUP: entitiespretty
+
+* Resources
+- Selected neuron: http://neuromorpho.org/neuron_info.jsp?neuron_name=71INTER
+- Reference article: https://www.ncbi.nlm.nih.gov/pubmed/8132869
+- Other articles about selected neurons: https://www.ncbi.nlm.nih.gov/pubmed/?term=Genioglossal+Motoneurons
+* 17OCT21
+** [master f28b874] redownloaded data files, plot neuron's dendritic morphology and checked that all compartmental constraints are satisfied
+ 4 files changed, 1229 insertions(+)
+ create mode 100644 71INTER.CNG.mat
+ create mode 100644 71INTER.CNG.txt
+ create mode 100644 lpfilter.m
+ create mode 100644 morpho.png
+** [master 90de38c] made compartmental model tested with current injection
+ 2 files changed, 129 insertions(+), 2 deletions(-)
+ create mode 100644 ss_voltage.png
+** [master 31fc47c] moved lpfilter files into its own folder
+ 5 files changed, 241 deletions(-)
+ delete mode 100644 lpfilter.m
+ rename 71INTER.CNG.mat => lpfilter/71INTER.CNG.mat (100%)
+ rename 71INTER.CNG.txt => lpfilter/71INTER.CNG.txt (100%)
+ rename morpho.png => lpfilter/morpho.png (100%)
+ rename ss_voltage.png => lpfilter/ss_voltage.png (100%)
+** Looks like my matrices are different from Simon's
+#+BEGIN_SRC 
+>> [A_mat,B_mat,R,L] = make_compartmental_matrices(Ri,Rm,Cm,radius,length,N,parent);
+>> isequal(A, A_mat)
+
+ans =
+
+  logical
+
+   0
+
+>> isequal(B, B_mat)
+
+ans =
+
+  logical
+
+   0
+#+END_SRC
