@@ -15,13 +15,15 @@ name_split = strsplit(url, '/');
 origname = name_split(end);
 filename = char(strrep(origname, 'swc', 'txt'));
 if new    outfilename = websave(filename,url); end
+
 %% Import and preprocess data
 dat = table2array(readtable(filename));  % import file and convert to array
 fdata = dat(:,all(~isnan(dat)));  % remove columns with nans
 data = fdata(fdata(:,2)~=2,:);  % remove axons
 datafile = strrep(filename,'txt', 'mat');
 if new  save(datafile,'fdata','data'); end% save data to file
-%% Plot dendritic tree
+
+%% Load data and plot dendritic tree
 load(datafile) % variable name is data
 
 cmprt = data(:,1);
@@ -76,6 +78,24 @@ Ri = 100;  % ohm cm
 Rm = 10000;  % ohm cm^2
 Cm = 1;  % uF/cm^2
 Er = 0;  % mV
+
+% measurements by Núñez-Abades et al. (1993)
+tau = 6.8e-3  % ms
+rin = 39.2e6  % Mohm
+areas = [16851.7,25188.4,23732.2,31959.9,25699.3,24629.3,31242.6]*1e-8;  % um^2 converted to cm^2
+area = mean(areas);
+lens = [5138.46,6877.29,6771.46,8142.56,6879.21,4311.81,6297.64]*1e-4;  % um converted to cm
+len = mean(lens);  % mean length across 7 cells
+dia = [0.9,1.04,1.11,1.1,1.07,1.62,1.39]*1e-4;  % um coverted to cm
+rad = mean(dia)/2;
+% assume Cm
+Cm = 1e-6;  % uF/cm^2
+% calculate Rm and Ri
+Rm = tau/Cm;  % ohm cm^2
+rm = Rm/area;  % ohm
+ri = (4*rin^2)/rm;  % ohm
+Ri = (ri*pi*rad^2)/len;  % ohm cm
+Cm = 1;  % revert back to uF/cm^2
 
 % find length of compartments
 length = zeros(size(cmprt));
@@ -205,15 +225,15 @@ branches={};
 
 % find branches
 for i=1:numel(branch_pts)
-    pbranch = branch_pts(i)
+    pbranch = branch_pts(i);
     for j=1:numel(dbranches{pbranch})
-        dbranch = dbranches{pbranch}(j)
+        dbranch = dbranches{pbranch}(j);
         branches{size(branches,2)+1} = [pbranch,dbranch];
         if ismember(dbranch,branch_pts)
             continue
         else
             while ~ismember(dbranch,branch_pts)
-                dbranch = find(parent==dbranch)
+                dbranch = find(parent==dbranch);
                 branches{size(branches,2)} = [branches{size(branches,2)},dbranch];
             end
         end

@@ -2,7 +2,7 @@
 
 * Resources
 - Selected neuron: http://neuromorpho.org/neuron_info.jsp?neuron_name=HP72N6B
-- Reference article: https://www.ncbi.nlm.nih.gov/pubmed/8132869
+- Reference article (PMID: 8132869): https://www.ncbi.nlm.nih.gov/pubmed/8132869
 - Other articles about selected neurons: https://www.ncbi.nlm.nih.gov/pubmed/?term=Genioglossal+Motoneurons
 ** Reconstructions from the paper
 - [[http://neuromorpho.org/MetaDataResult.jsp?count=43&summary={%2522neuron%2522:{%2522queryMetadataList%2522:%5B%5D,%2522queryOperationsWeight%2522:%5B%5D,%2522queryOperationsAge%2522:%5B%5D,%2522queryStringsList%2522:%5B%5D,%2522brainRegionList%2522:%5B%5D,%2522cellTypeList%2522:%5B%5D},%2522others%2522:{%2522otherParametersList%2522:%5B{%2522idName%2522:%2522pmid%2522,%2522className%2522:%2522NeuronArticle%2522,%2522idList%2522:%5B8132869%5D}%5D},%2522pageNumber%2522:{%2522page%2522:1}}][All 43 neurons]]
@@ -57,3 +57,9 @@ ans =
  4 files changed, 27 insertions(+), 9 deletions(-)
  rewrite lpfilter/morpho.png (99%)
  rewrite lpfilter/ss_voltage.png (99%)
+** [master d2184da] added morphology data files
+ 5 files changed, 2765 insertions(+)
+ create mode 100644 lpfilter/HP52N3B.CNG.mat
+ create mode 100644 lpfilter/HP52N3B.CNG.txt
+ create mode 100644 lpfilter/HP72N6B.CNG.mat
+ create mode 100644 lpfilter/HP72N6B.CNG.txt
