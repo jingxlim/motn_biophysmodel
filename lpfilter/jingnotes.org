@@ -1,9 +1,16 @@
 #+STARTUP: entitiespretty
 
 * Resources
-- Selected neuron: http://neuromorpho.org/neuron_info.jsp?neuron_name=71INTER
+- Selected neuron: http://neuromorpho.org/neuron_info.jsp?neuron_name=HP72N6B
 - Reference article: https://www.ncbi.nlm.nih.gov/pubmed/8132869
 - Other articles about selected neurons: https://www.ncbi.nlm.nih.gov/pubmed/?term=Genioglossal+Motoneurons
+** Reconstructions from the paper
+- [[http://neuromorpho.org/MetaDataResult.jsp?count=43&summary={%2522neuron%2522:{%2522queryMetadataList%2522:%5B%5D,%2522queryOperationsWeight%2522:%5B%5D,%2522queryOperationsAge%2522:%5B%5D,%2522queryStringsList%2522:%5B%5D,%2522brainRegionList%2522:%5B%5D,%2522cellTypeList%2522:%5B%5D},%2522others%2522:{%2522otherParametersList%2522:%5B{%2522idName%2522:%2522pmid%2522,%2522className%2522:%2522NeuronArticle%2522,%2522idList%2522:%5B8132869%5D}%5D},%2522pageNumber%2522:{%2522page%2522:1}}][All 43 neurons]]
+- [[http://neuromorpho.org/MetaDataResult.jsp?count=8&summary={%2522neuron%2522:{%2522queryMetadataList%2522:%5B%5D,%2522queryOperationsWeight%2522:%5B%5D,%2522queryOperationsAge%2522:%5B{%2522opValue%2522:%5B18%5D,%2522opName%2522:%2522minAge%2522,%2522op%2522:%25222%2522,%2522opScale%2522:%2522D%2522}%5D,%2522queryStringsList%2522:%5B%5D,%2522brainRegionList%2522:%5B%5D,%2522cellTypeList%2522:%5B%5D},%2522others%2522:{%2522otherParametersList%2522:%5B{%2522idName%2522:%2522pmid%2522,%2522className%2522:%2522NeuronArticle%2522,%2522idList%2522:%5B8132869%5D}%5D},%2522pageNumber%2522:{%2522page%2522:1}}][9 mature neurons]]
+* Neuron facts
+- Visualisation method: intracellular injection of neurobiotin
+- number of primary dendrites: 6 (remains unchanged with age)
+- 
 * 17OCT21
 ** [master f28b874] redownloaded data files, plot neuron's dendritic morphology and checked that all compartmental constraints are satisfied
  4 files changed, 1229 insertions(+)
@@ -40,3 +47,9 @@ ans =
 
    0
 #+END_SRC
+** [master eb1c6e7] added back lpfilter.m -- accidentally deleted it from repo
+ 1 file changed, 241 insertions(+)
+ create mode 100644 lpfilter/lpfilter.m
+** [master 4c34328] added jingnotes.org
+ 1 file changed, 42 insertions(+)
+ create mode 100644 lpfilter/jingnotes.org

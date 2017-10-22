@@ -4,20 +4,23 @@
 % Topic 5: low pass filtering
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+%% Refresh workspace
+clr;
+
 %% Download file
-url = 'http://neuromorpho.org/dableFiles/cameron/CNG%20version/71INTER.CNG.swc';
+new = 0;
+
+url = 'http://neuromorpho.org/dableFiles/cameron/CNG%20version/HP72N6B.CNG.swc';
 name_split = strsplit(url, '/');
 origname = name_split(end);
 filename = char(strrep(origname, 'swc', 'txt'));
-outfilename = websave(filename,url);
-
+if new    outfilename = websave(filename,url); end
 %% Import and preprocess data
 dat = table2array(readtable(filename));  % import file and convert to array
 fdata = dat(:,all(~isnan(dat)));  % remove columns with nans
 data = fdata(fdata(:,2)~=2,:);  % remove axons
 datafile = strrep(filename,'txt', 'mat');
-save(datafile,'fdata','data'); % save data to file
-
+if new  save(datafile,'fdata','data'); end% save data to file
 %% Plot dendritic tree
 load(datafile) % variable name is data
 
@@ -106,10 +109,12 @@ end
 lambda = sqrt((Rm*radius)/(Ri*2));
 
 % check if size constraint is satisfied for all dendritic segments
-constraint = length./lambda > 0.1;
+ratio = length./lambda;
+constraint =  ratio > 0.1;
 
 if find(constraint)
     disp('Constraint is NOT satisfied for all dendritic segments')
+    disp('Compartment '+string(find(constraint))+' does not satisfy the constraint')
 else
     disp('Constraint is satisfied for all dendritic segments!')
 end
@@ -170,7 +175,7 @@ B = eye(N).*(1./Cm_matrix);
 
 % construct U vector
 Iapp = 1e-9;  % mA
-inj_cmprt = 517;
+inj_cmprt = 348;
 U = zeros(N,1);
 U(inj_cmprt,1) = Iapp;
 
@@ -233,7 +238,7 @@ figure(2); clf; hold on;
 
 for i=1:numel(branches)
     plot(position{i},V_(branches{i}),'-');
-    % text(position{i},V_(branches{i})+0.001, cellstr(string(branches{i})),'FontSize',4);
+    % text(position{i},V_(branches{i})+0.001, cellstr(string(branches{i})),'FontSize',8);
 end
 
 xlabel('Electrontonic distance from soma'); ylabel('Steady state voltage [mV]');
