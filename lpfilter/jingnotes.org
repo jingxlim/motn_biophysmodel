@@ -53,3 +53,7 @@ ans =
 ** [master 4c34328] added jingnotes.org
  1 file changed, 42 insertions(+)
  create mode 100644 lpfilter/jingnotes.org
+** [master 2000987] selected neuron was actually an interneuron -- changed neuron of interest
+ 4 files changed, 27 insertions(+), 9 deletions(-)
+ rewrite lpfilter/morpho.png (99%)
+ rewrite lpfilter/ss_voltage.png (99%)
