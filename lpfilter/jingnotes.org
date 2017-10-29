@@ -3,7 +3,8 @@
 * Resources
 - Selected neuron: http://neuromorpho.org/neuron_info.jsp?neuron_name=HP72N6B
 - Reference article (PMID: 8132869): https://www.ncbi.nlm.nih.gov/pubmed/8132869
-- Other articles about selected neurons: https://www.ncbi.nlm.nih.gov/pubmed/?term=Genioglossal+Motoneurons
+- Other articles about selected neurons: https://www.ncbi.nlm.nih.gov/pubmed/?term=N%C3%BA%C3%B1ez-Abades+PA%5BAuthor%5D+Genioglossal+Motoneurons%5Btitle%5D
+- NeuroElectro: [[http://neuroelectro.org/neuron/91/][Electrophysiological properties of Hypoglossal nucleus motor neurons]]
 ** Reconstructions from the paper
 - [[http://neuromorpho.org/MetaDataResult.jsp?count=43&summary={%2522neuron%2522:{%2522queryMetadataList%2522:%5B%5D,%2522queryOperationsWeight%2522:%5B%5D,%2522queryOperationsAge%2522:%5B%5D,%2522queryStringsList%2522:%5B%5D,%2522brainRegionList%2522:%5B%5D,%2522cellTypeList%2522:%5B%5D},%2522others%2522:{%2522otherParametersList%2522:%5B{%2522idName%2522:%2522pmid%2522,%2522className%2522:%2522NeuronArticle%2522,%2522idList%2522:%5B8132869%5D}%5D},%2522pageNumber%2522:{%2522page%2522:1}}][All 43 neurons]]
 - [[http://neuromorpho.org/MetaDataResult.jsp?count=8&summary={%2522neuron%2522:{%2522queryMetadataList%2522:%5B%5D,%2522queryOperationsWeight%2522:%5B%5D,%2522queryOperationsAge%2522:%5B{%2522opValue%2522:%5B18%5D,%2522opName%2522:%2522minAge%2522,%2522op%2522:%25222%2522,%2522opScale%2522:%2522D%2522}%5D,%2522queryStringsList%2522:%5B%5D,%2522brainRegionList%2522:%5B%5D,%2522cellTypeList%2522:%5B%5D},%2522others%2522:{%2522otherParametersList%2522:%5B{%2522idName%2522:%2522pmid%2522,%2522className%2522:%2522NeuronArticle%2522,%2522idList%2522:%5B8132869%5D}%5D},%2522pageNumber%2522:{%2522page%2522:1}}][9 mature neurons]]
@@ -63,3 +64,11 @@ ans =
  create mode 100644 lpfilter/HP52N3B.CNG.txt
  create mode 100644 lpfilter/HP72N6B.CNG.mat
  create mode 100644 lpfilter/HP72N6B.CNG.txt
+** [master 628fbaa] calculated Rm and Ri based on Rin and tau from Núñez-Abades et al. (1993)
+ 4 files changed, 31 insertions(+), 5 deletions(-)
+ rewrite lpfilter/ss_voltage.png (99%)
+* 17OCT28
+** TODO Set up synaptic input into compartmental model
+- State "TODO"       from              [2017-10-28 Sat 01:25]
+** TODO Figure what to do with soma
+- State "TODO"       from              [2017-10-28 Sat 01:25]

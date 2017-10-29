@@ -21,7 +21,7 @@ dat = table2array(readtable(filename));  % import file and convert to array
 fdata = dat(:,all(~isnan(dat)));  % remove columns with nans
 data = fdata(fdata(:,2)~=2,:);  % remove axons
 datafile = strrep(filename,'txt', 'mat');
-if new  save(datafile,'fdata','data'); end% save data to file
+if new  save(datafile,'fdata','data'); end  % save data to file
 
 %% Load data and plot dendritic tree
 load(datafile) % variable name is data
@@ -77,25 +77,25 @@ saveas(gcf, 'morpho.png')
 Ri = 100;  % ohm cm
 Rm = 10000;  % ohm cm^2
 Cm = 1;  % uF/cm^2
-Er = 0;  % mV
+E_rest = -65;  % mV
 
-% measurements by Núñez-Abades et al. (1993)
-tau = 6.8e-3  % ms
-rin = 39.2e6  % Mohm
-areas = [16851.7,25188.4,23732.2,31959.9,25699.3,24629.3,31242.6]*1e-8;  % um^2 converted to cm^2
-area = mean(areas);
-lens = [5138.46,6877.29,6771.46,8142.56,6879.21,4311.81,6297.64]*1e-4;  % um converted to cm
-len = mean(lens);  % mean length across 7 cells
-dia = [0.9,1.04,1.11,1.1,1.07,1.62,1.39]*1e-4;  % um coverted to cm
-rad = mean(dia)/2;
-% assume Cm
-Cm = 1e-6;  % uF/cm^2
-% calculate Rm and Ri
-Rm = tau/Cm;  % ohm cm^2
-rm = Rm/area;  % ohm
-ri = (4*rin^2)/rm;  % ohm
-Ri = (ri*pi*rad^2)/len;  % ohm cm
-Cm = 1;  % revert back to uF/cm^2
+% % measurements by Núñez-Abades et al. (1993)
+% tau = 6.8e-3  % ms
+% rin = 39.2e6  % Mohm
+% areas = [16851.7,25188.4,23732.2,31959.9,25699.3,24629.3,31242.6]*1e-8;  % um^2 converted to cm^2
+% area = mean(areas);
+% lens = [5138.46,6877.29,6771.46,8142.56,6879.21,4311.81,6297.64]*1e-4;  % um converted to cm
+% len = mean(lens);  % mean length across 7 cells
+% dia = [0.9,1.04,1.11,1.1,1.07,1.62,1.39]*1e-4;  % um coverted to cm
+% rad = mean(dia)/2;
+% % assume Cm
+% Cm = 1e-6;  % uF/cm^2
+% % calculate Rm and Ri
+% Rm = tau/Cm;  % ohm cm^2
+% rm = Rm/area;  % ohm
+% ri = (4*rin^2)/rm;  % ohm
+% Ri = (ri*pi*rad^2)/len;  % ohm cm
+% Cm = 1;  % revert back to uF/cm^2
 
 % find length of compartments
 length = zeros(size(cmprt));
@@ -190,7 +190,7 @@ end
 Cm_matrix = repmat(Cm_all,1,N);
 A = A_ ./ Cm_matrix;
 
-%% Initialize comparmental model: construct matrices B and U
+%% Response to current step: construct matrices B and U
 B = eye(N).*(1./Cm_matrix);
 
 % construct U vector
@@ -199,7 +199,7 @@ inj_cmprt = 348;
 U = zeros(N,1);
 U(inj_cmprt,1) = Iapp;
 
-%% Find steady state voltages
+%% Find steady state voltages in response to current step
 
 V = - inv(A)*B*U;
 
@@ -264,3 +264,95 @@ end
 xlabel('Electrontonic distance from soma'); ylabel('Steady state voltage [mV]');
 title('Steady-state voltage along cables: Injection into branch '+string(inj_cmprt));
 saveas(gcf, 'ss_voltage.png');
+
+%% Reponse to synaptic input: construct matrix B
+E_AMPA = 0;  % mV
+E_GABA = -75;  % mV
+
+B_ = zeros(N, 2*N);
+for i=1:numel(cmprt)
+    ccmprt = cmprt(i);
+    B_(ccmprt, 2*ccmprt-1) = (E_AMPA - E_rest)/(E_AMPA - E_GABA);
+    B_(ccmprt, 2*ccmprt) = (E_GABA - E_rest)/(E_AMPA - E_GABA);
+end
+
+B = B_ ./ repmat(Cm_matrix,1,2);
+
+%% Tune synaptic input
+tp_AMPA = 0.05e-3  % ms
+tp_GABA = 1e-3  % ms
+Gs_AMPA = 40e-12  % pS
+Gs_GABA = 400e-12  % pS (10x higher)
+D_AMPA = 1e6  % channel/cm^2
+D_GABA = 1e6  % channel/cm^2
+
+Gp_AMPA = @(r,dl) Gs_AMPA * D_AMPA * 2*pi*r*dl;
+Gp_GABA = @(r,dl) Gs_GABA * D_GABA * 2*pi*r*dl;
+
+g_AMPA_ = @(t,r,dl) (t/tp_AMPA).*exp(1-(t/tp_AMPA)).*Gp_AMPA(r,dl);
+g_GABA_ = @(t,r,dl) (t/tp_GABA).*exp(1-(t/tp_GABA)).*Gp_GABA(r,dl);
+
+sim_time = 0:1e-5:1e-2;
+figure(3); clf;
+
+% Plot AMPA and GABA synaptic inputs on separate axes
+subplot(2,1,2); hold on;
+yyaxis left
+plot(sim_time, g_AMPA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
+     'DisplayName','AMPA');
+ylabel('AMPA conductance [pS]')
+yyaxis right
+plot(sim_time, g_GABA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
+     'DisplayName','GABA');
+ylabel('GABA conductance [pS]'); xlabel('Time [ms]');
+legend('show'); title('Normalized synaptic inpuits');
+
+% Plot AMPA and GABA synaptic inputs on the same axis
+subplot(2,1,1); hold on
+plot(sim_time, g_AMPA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
+     'DisplayName','AMPA');
+plot(sim_time, g_GABA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
+     'DisplayName','GABA');
+ylabel('Conductance [pS]'); xlabel('Time [ms]');
+legend('show'); title('Synaptic inputs')
+
+%% Create synaptic input trains
+sim_time = 0:1e-5:1e-3;
+sim_t = 0:1e-5/2:1e-3;
+g_AMPA = @(t,inputt,r,dl) ((t-inputt)/tp_AMPA).*exp(1-((t-inputt)/tp_AMPA))...
+           .*Gp_AMPA(r,dl);
+g_GABA = @(t,inputt,r,dl) ((t-inputt)/tp_GABA).*exp(1-((t-inputt)/tp_GABA))...
+           .*Gp_GABA(r,dl);
+       
+AMPA_inputt = [0, 10, 30, 40, 60, 90] .* 1e-5;
+AMPA_cond = zeros(size(sim_t));
+for i=1:numel(AMPA_inputt)
+    inputt = AMPA_inputt(i);
+    cond = @(t) subplus(g_AMPA(t,inputt,radius(inj_cmprt),length(inj_cmprt)));
+    AMPA_cond = AMPA_cond + cond(sim_t);
+end
+
+figure(4); clf; hold on;
+plot(sim_t, AMPA_cond);
+ylabel('Conductance [nS]'); xlabel('Time [ms]');
+
+%% Insert synapses: construct matrix G
+G_ = @(t) make_G(t,inj_cmprt,N,AMPA_cond,sim_time);
+G = @(t) G_(t) ./ Cm_matrix;
+
+%% Response to synaptic input: construct matrix U
+U = @(t) make_U(t,inj_cmprt,N,AMPA_cond,sim_time);
+
+%% Solve for voltage over time
+
+% system of differential equations
+dVdt = @(t,V) A*V + B*U(t) + G(t)*V;
+
+sim_T = sim_time/(Rm*Cm);
+
+[t,z] = ode23(@(t,z) dVdt(t,z), sim_time, zeros(N,1));
+
+figure(5); clf; hold on;
+plot(sim_T,z(:,1),'DisplayName','V_{soma}');
+title('Time evolution of V(X,T)');
+xlabel('T'); ylabel('V [mV]'); legend('show');
