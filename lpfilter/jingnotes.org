@@ -68,7 +68,16 @@ ans =
  4 files changed, 31 insertions(+), 5 deletions(-)
  rewrite lpfilter/ss_voltage.png (99%)
 * 17OCT28
-** TODO Set up synaptic input into compartmental model
+** DONE Set up synaptic input into compartmental model
+CLOSED: [2017-10-29 Sun 01:52]
+- State "DONE"       from "TODO"       [2017-10-29 Sun 01:52]
 - State "TODO"       from              [2017-10-28 Sat 01:25]
 ** TODO Figure what to do with soma
 - State "TODO"       from              [2017-10-28 Sat 01:25]
+* 17OCT29
+** [master 2f5e4f3] generated synaptic input; unsolved matrix G and U problems
+ 7 files changed, 135 insertions(+), 24 deletions(-)
+ create mode 100644 lpfilter/make_G.m
+ create mode 100644 lpfilter/make_U.m
+ rewrite lpfilter/ss_voltage.png (99%)
+ create mode 100644 tongue-extrinsic-muscles.png

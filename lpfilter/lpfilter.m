@@ -326,9 +326,11 @@ g_GABA = @(t,inputt,r,dl) ((t-inputt)/tp_GABA).*exp(1-((t-inputt)/tp_GABA))...
        
 AMPA_inputt = [0, 10, 30, 40, 60, 90] .* 1e-5;
 AMPA_cond = zeros(size(sim_t));
+% cell_cond = {};
 for i=1:numel(AMPA_inputt)
     inputt = AMPA_inputt(i);
     cond = @(t) subplus(g_AMPA(t,inputt,radius(inj_cmprt),length(inj_cmprt)));
+    % cell_cond{end+1} = cond;
     AMPA_cond = AMPA_cond + cond(sim_t);
 end
 
@@ -336,13 +338,22 @@ figure(4); clf; hold on;
 plot(sim_t, AMPA_cond);
 ylabel('Conductance [nS]'); xlabel('Time [ms]');
 
-%% Insert synapses: construct matrix G
+%% Insert synapses: construct matrix G(t)
 G_ = @(t) make_G(t,inj_cmprt,N,AMPA_cond,sim_time);
 G = @(t) G_(t) ./ Cm_matrix;
 
-%% Response to synaptic input: construct matrix U
-U = @(t) make_U(t,inj_cmprt,N,AMPA_cond,sim_time);
+%% Response to synaptic input: construct matrix U(t)
+AMPA_inputt = [0, 10, 30, 40, 60, 90] .* 1e-5;
+GABA_inputt = [] .* 1e-5;
+U = @(t) make_U(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,AMPA_inputt,GABA_inputt);
 
+% check synaptic input train is properly constructed in U
+figure(5); clf; hold on;
+for i=1:numel(sim_time)
+    t = sim_time(i);
+    U_mat = U(t);
+    plot(t, U_mat(2*inj_cmprt-1,1),'.');
+end
 %% Solve for voltage over time
 
 % system of differential equations
