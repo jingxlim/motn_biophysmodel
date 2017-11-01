@@ -1,9 +1,7 @@
-function U = make_U(t,inj_cmprt,N,radius,length,...
+function G_ = make_G_(t,inj_cmprt,N,radius,length,...
                     tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,...
                     AMPA_inputt,GABA_inputt)
-
-    U = zeros(2*N,1);  % initialize U matrix
-    
+                
     Gp_AMPA = @(r,dl) Gs_AMPA * D_AMPA * 2*pi*r*dl;
     Gp_GABA = @(r,dl) Gs_GABA * D_GABA * 2*pi*r*dl;
 
@@ -20,8 +18,6 @@ function U = make_U(t,inj_cmprt,N,radius,length,...
         AMPA_cond = AMPA_cond + AMPA_g(t);
     end
     
-    U(2*inj_cmprt-1,1) = AMPA_cond;  % excitatory
-    
     GABA_cond = 0;  % conductnace is 0 unless there's an input
     
     for i=1:numel(GABA_inputt)
@@ -31,6 +27,7 @@ function U = make_U(t,inj_cmprt,N,radius,length,...
         GABA_cond = GABA_cond + GABA_g(t);
     end
     
-    U(2*inj_cmprt,1) = GABA_cond;  % inhibitory
+    G_ = zeros(N);
+    G_(inj_cmprt,inj_cmprt) = -(AMPA_cond+GABA_cond);
     
 end

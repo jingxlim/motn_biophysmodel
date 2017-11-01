@@ -81,3 +81,7 @@ CLOSED: [2017-10-29 Sun 01:52]
  create mode 100644 lpfilter/make_U.m
  rewrite lpfilter/ss_voltage.png (99%)
  create mode 100644 tongue-extrinsic-muscles.png
+* 17OCT31
+** [master 6bc5fd8] matrix U takes in g values derived from the shape of synaptic input
+ 5 files changed, 59 insertions(+), 10 deletions(-)
+ rewrite lpfilter/make_U.m (100%)

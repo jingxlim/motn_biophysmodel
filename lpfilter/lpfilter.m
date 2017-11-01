@@ -45,7 +45,7 @@ for i=1:numel(cmprt)
     y_cmprt = y(i);
     z_cmprt = z(i);
     
-    % text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',1);
+    text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',5);
     
     parent_cmprt = parent(i);
     
@@ -265,6 +265,21 @@ xlabel('Electrontonic distance from soma'); ylabel('Steady state voltage [mV]');
 title('Steady-state voltage along cables: Injection into branch '+string(inj_cmprt));
 saveas(gcf, 'ss_voltage.png');
 
+%% Solve for voltage over time
+
+% system of differential equations
+dVdt = @(V) A*V + B*U;
+
+t_span = 0:0.1:100;
+T_span = t_span/(Rm*Cm);
+
+[t,V] = ode23(@(t,V) dVdt(V), t_span, zeros(N,1));
+
+figure(11); clf; hold on;
+plot(T_span,V(:,1),'DisplayName','V_{soma}');
+title('Time evolution of V(X,T) in response to I_{app}');
+xlabel('T'); ylabel('V [mV]'); legend('show');
+
 %% Reponse to synaptic input: construct matrix B
 E_AMPA = 0;  % mV
 E_GABA = -75;  % mV
@@ -325,30 +340,39 @@ g_GABA = @(t,inputt,r,dl) ((t-inputt)/tp_GABA).*exp(1-((t-inputt)/tp_GABA))...
            .*Gp_GABA(r,dl);
        
 AMPA_inputt = [0, 10, 30, 40, 60, 90] .* 1e-5;
-AMPA_cond = zeros(size(sim_t));
+AMPA_cond = zeros(size(sim_time));
 % cell_cond = {};
 for i=1:numel(AMPA_inputt)
     inputt = AMPA_inputt(i);
     cond = @(t) subplus(g_AMPA(t,inputt,radius(inj_cmprt),length(inj_cmprt)));
     % cell_cond{end+1} = cond;
-    AMPA_cond = AMPA_cond + cond(sim_t);
+    AMPA_cond = AMPA_cond + cond(sim_time);
 end
 
 figure(4); clf; hold on;
-plot(sim_t, AMPA_cond);
+plot(sim_time, AMPA_cond);
 ylabel('Conductance [nS]'); xlabel('Time [ms]');
 
+%% Specify input times
+AMPA_inputt = [20,30] .* 1e-5;
+GABA_inputt = [] .* 1e-5;
+
 %% Insert synapses: construct matrix G(t)
-G_ = @(t) make_G(t,inj_cmprt,N,AMPA_cond,sim_time);
+G_ = @(t) make_G_(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,AMPA_inputt,GABA_inputt);
 G = @(t) G_(t) ./ Cm_matrix;
 
+% check changes in conductance in G matrix
+figure(5); clf; hold on;
+for i=1:numel(sim_time)
+    t = sim_time(i);
+    G_mat = G(t);
+    plot(t, G_mat(inj_cmprt,inj_cmprt),'.');
+end
 %% Response to synaptic input: construct matrix U(t)
-AMPA_inputt = [0, 10, 30, 40, 60, 90] .* 1e-5;
-GABA_inputt = [] .* 1e-5;
 U = @(t) make_U(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,AMPA_inputt,GABA_inputt);
 
 % check synaptic input train is properly constructed in U
-figure(5); clf; hold on;
+figure(6); clf; hold on;
 for i=1:numel(sim_time)
     t = sim_time(i);
     U_mat = U(t);
@@ -361,9 +385,9 @@ dVdt = @(t,V) A*V + B*U(t) + G(t)*V;
 
 sim_T = sim_time/(Rm*Cm);
 
-[t,z] = ode23(@(t,z) dVdt(t,z), sim_time, zeros(N,1));
+[t,V] = ode23(@(t,V) dVdt(t,V), sim_time, zeros(N,1));
 
-figure(5); clf; hold on;
-plot(sim_T,z(:,1),'DisplayName','V_{soma}');
+figure(7); clf; hold on;
+plot(sim_T,V(:,inj_cmprt),'DisplayName','V_{soma}');
 title('Time evolution of V(X,T)');
 xlabel('T'); ylabel('V [mV]'); legend('show');
