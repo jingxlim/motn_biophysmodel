@@ -14,7 +14,7 @@
 % each compartment, and u is the input vector containing the current
 % applied to each compartment.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [A,B,R,L] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,r,l,n,parents)
+function [A,B,R,L,c] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,r,l,n,parents)
 %Check inputs
 if nargin < 10
     error('Not enough input arguments');
@@ -48,23 +48,23 @@ gm = (pi./Rm).*2.*R.*L; %membrane conductance of segments
 A = zeros(num_rows);
 B = zeros(num_rows,2*num_rows);
 for j = 1:num_rows
-    B(j,2*j-1) = 1/c(j)*((Ee(j)-Er(j))/(Ee(j)-Ei(j)));
-    B(j,2*j) = 1/c(j)*((Ei(j)-Er(j))/(Ee(j)-Ei(j)));
+    B(j,2*j-1) = (1/c(j))*((Ee(j)-Er(j))/(Ee(j)-Ei(j)));
+    B(j,2*j) = (1/c(j))*((Ei(j)-Er(j))/(Ee(j)-Ei(j)));
     children = find(parents==j);
     if parents(j) <= 0
         gi(j) = 0;
     end
     for i = 1:num_rows
         if ismember(i,children)
-            A(j,i) = gi(i).*B(j,j);
+            A(j,i) = gi(i).*(1/c(j));
         elseif i==parents(j)
-            A(j,i) = gi(j).*B(j,j);
+            A(j,i) = gi(j).*(1/c(j));
         end
     end
     if isempty(children)
-        A(j,j) = -(gi(j)+gm(j)).*B(j,j);        
+        A(j,j) = -(gi(j)+gm(j)).*(1/c(j));        
     else
-        A(j,j) = -(sum(gi(children))+gi(j)+gm(j)).*B(j,j);
+        A(j,j) = -(sum(gi(children))+gi(j)+gm(j)).*(1/c(j));
     end
 end
 
