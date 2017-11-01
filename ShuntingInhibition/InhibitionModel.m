@@ -4,21 +4,23 @@ neuron = load('/Users/Simon/Google Drive/Graduate School/Hopkins/Models of the N
 axon = find(neuron(:,2)==2);
 neuron(axon,:) = [];
 
-Ri = 100; %Ohm - cm
-Rm = 10000; %Ohm - cm^2
+%Define parameters
+Ri = 70; %Ohm - cm
+Rm = 2500; %Ohm - cm^2
 Cm = 1; %microF/cm^2
-Iapp = 10e-9; %mA
-Er = -50; %Mv
-Ee = 50; %Mv
-Ei = -70; %Mv
+Er = -70; %Mv
+Ee = 60; %Mv
+Ei = Er; %Mv
+
+num_compartments = size(neuron,1);
 
 %Convert micrometers to centimeters
 neuron(:,3:6) = neuron(:,3:6)./10000;
 
 lambda = sqrt((Rm./Ri).*(neuron(:,6)./2));
 
-l = zeros(length(neuron),1);
-for n = 1:length(neuron)
+l = zeros(num_compartments,1);
+for n = 1:num_compartments
     p = neuron(n,7);
     if p < 1
         dx = 0-neuron(n,3);
@@ -41,22 +43,46 @@ else
     disp('Yes!');
 end
 
-n = ones(length(neuron),1);
-[A,B,R,L] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,neuron(:,6),l,n,neuron(:,7));
+Ee = ones(num_compartments,1)*Ee;
+Ei = ones(num_compartments,1)*Ei;
+Er = ones(num_compartments,1)*Er;
+
+n = ones(num_compartments,1);
+[A,B,R,L,C] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,neuron(:,6),l,n,neuron(:,7));
 
 %Set up input vector u
+u = zeros(2*num_compartments,1);
+ge = zeros(num_compartments,1);
+gi = zeros(num_compartments,1);
 
+ge(7:10) = 0.001;
+%gi(35) = 0.001;
 
+u(1:2:end) = ge;
+u(2:2:end) = gi;
 
 %Set up G Matrix
+G = zeros(num_compartments);
+for j = 1:num_compartments
+   G(j,j) = -(ge(j)+gi(j))/C(j); 
+end
 
+DvpDt = @(t,vp) A*vp + B*u + G*vp;
+tp = 0:0.00001:0.1;
 
+v0 = zeros(num_compartments,1);
+[tr,Vp] = ode23(DvpDt,tp,v0);
 
-%dvp/dt = @(vp,t) A*vp(t) + B*u
-
-
-
-
+V = zeros(size(Vp));
+x = zeros(num_compartments,1);
+for n = 1:num_compartments
+    p = neuron(n,7);
+    if p > 0
+        x(n) = x(p) + l(n);
+    end
+    V(:,n) = Vp(:,n)*(Ee(n)-Ei(n))+Er(n);
+end
+X = x./lambda;
 
 
 
