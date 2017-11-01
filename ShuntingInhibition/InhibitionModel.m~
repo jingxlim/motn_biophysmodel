@@ -6,10 +6,10 @@ neuron(axon,:) = [];
 
 %Define parameters
 Ri = 100; %Ohm - cm
-Rm = 10000; %Ohm - cm^2
+Rm = 1e4; %Ohm - cm^2
 Cm = 1; %microF/cm^2
-Er = -50; %Mv
-Ee = 50; %Mv
+Er = -70; %Mv
+Ee = 60; %Mv
 Ei = Er; %Mv
 
 num_compartments = size(neuron,1);
@@ -23,9 +23,10 @@ l = zeros(num_compartments,1);
 for n = 1:num_compartments
     p = neuron(n,7);
     if p < 1
-        dx = 0-neuron(n,3);
-        dy = 0-neuron(n,4);
-        dz = 0-neuron(n,5);
+        
+%         dx = 0-neuron(n,3);
+%         dy = 0-neuron(n,4);
+%         dz = 0-neuron(n,5);
     else
         dx = neuron(p,3)-neuron(n,3);
         dy = neuron(p,4)-neuron(n,4);
@@ -48,15 +49,20 @@ Ei = ones(num_compartments,1)*Ei;
 Er = ones(num_compartments,1)*Er;
 
 n = ones(num_compartments,1);
-[A,B,R,L,C] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,neuron(:,6),l,n,neuron(:,7));
+[A,B,R,~,C] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,neuron(:,6),l,n,neuron(:,7));
+
+n = ones(num_compartments,1);
+[As,Bs,Rs,Ls] = make_compartmental_matrices(Ri,Rm,Cm,neuron(:,6),l,n,neuron(:,7));
 
 %Set up input vector u
 u = zeros(2*num_compartments,1);
+u2 = zeros(num_compartments,1);
 ge = zeros(num_compartments,1);
 gi = zeros(num_compartments,1);
 
-ge(537:540) = 0.001;
-gi(536) = 0.001;
+u2(348) = 1e-9;
+ge(7:10) = 0.001;
+%gi(35) = 0.001;
 
 u(1:2:end) = ge;
 u(2:2:end) = gi;
@@ -68,16 +74,29 @@ for j = 1:num_compartments
 end
 
 DvpDt = @(t,vp) A*vp + B*u + G*vp;
+tp = 0:0.00001:0.1;
+
+dvdt = @(t,v) As*v + Bs*u2;
+tspan = 0:0.1:100;
+
+[t,Vs] = ode23(dvdt,tspan,zeros(num_compartments,1));
 
 v0 = zeros(num_compartments,1);
-[tr,V] = ode23(DvpDt,0:0.00001:0.002,v0);
+[tr,Vp] = ode23(DvpDt,tp,v0);
 
+V = zeros(size(Vp));
 x = zeros(num_compartments,1);
 for n = 1:num_compartments
     p = neuron(n,7);
     if p > 0
         x(n) = x(p) + l(n);
     end
+    V(:,n) = Vp(:,n)*(Ee(n)-Ei(n))+Er(n);
 end
 X = x./lambda;
+
+
+
+
+
 

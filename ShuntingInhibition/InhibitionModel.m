@@ -5,8 +5,8 @@ axon = find(neuron(:,2)==2);
 neuron(axon,:) = [];
 
 %Define parameters
-Ri = 70; %Ohm - cm
-Rm = 2500; %Ohm - cm^2
+Ri = 100; %Ohm - cm
+Rm = 1e4; %Ohm - cm^2
 Cm = 1; %microF/cm^2
 Er = -70; %Mv
 Ee = 60; %Mv
@@ -48,15 +48,15 @@ Ei = ones(num_compartments,1)*Ei;
 Er = ones(num_compartments,1)*Er;
 
 n = ones(num_compartments,1);
-[A,B,R,L,C] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,neuron(:,6),l,n,neuron(:,7));
+[A,B,R,~,C] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,neuron(:,6),l,n,neuron(:,7));
 
 %Set up input vector u
 u = zeros(2*num_compartments,1);
 ge = zeros(num_compartments,1);
 gi = zeros(num_compartments,1);
 
-ge(7:10) = 0.001;
-%gi(35) = 0.001;
+ge(7:10) = 1;
+gi(35) = 0.1;
 
 u(1:2:end) = ge;
 u(2:2:end) = gi;
