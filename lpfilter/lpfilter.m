@@ -7,6 +7,10 @@
 %% Refresh workspace
 clr;
 
+%% Set up ODE waitbar
+% options = odeset('OutputFcn',@odewbar)  % ODE wait bar
+options = odeset('OutputFcn',@odeprog,'Events',@odeabort)  % ODE Progress Bar and Interrupt
+
 %% Download file
 new = 0;
 
@@ -45,7 +49,7 @@ for i=1:numel(cmprt)
     y_cmprt = y(i);
     z_cmprt = z(i);
     
-    text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',5);
+    % text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',5);
     
     parent_cmprt = parent(i);
     
@@ -270,12 +274,13 @@ saveas(gcf, 'ss_voltage.png');
 % system of differential equations
 dVdt = @(V) A*V + B*U;
 
-t_span = 0:0.1:100;
+t_span = 0:1e2:1e3;
 T_span = t_span/(Rm*Cm);
 
-[t,V] = ode23(@(t,V) dVdt(V), t_span, zeros(N,1));
+[t,V] = ode23(@(t,V) dVdt(V), t_span, zeros(N,1),options);
 
 figure(11); clf; hold on;
+plot(T_span,V(:,inj_cmprt),'DisplayName','V_{injection}');
 plot(T_span,V(:,1),'DisplayName','V_{soma}');
 title('Time evolution of V(X,T) in response to I_{app}');
 xlabel('T'); ylabel('V [mV]'); legend('show');
@@ -294,12 +299,12 @@ end
 B = B_ ./ repmat(Cm_matrix,1,2);
 
 %% Tune synaptic input
-tp_AMPA = 0.05e-3  % ms
-tp_GABA = 1e-3  % ms
-Gs_AMPA = 40e-12  % pS
-Gs_GABA = 400e-12  % pS (10x higher)
-D_AMPA = 1e6  % channel/cm^2
-D_GABA = 1e6  % channel/cm^2
+tp_AMPA = 0.05e-3;  % ms
+tp_GABA = 1e-3;  % ms
+Gs_AMPA = 4e-12; % 40e-12;  % pS
+Gs_GABA = 400e-12;  % pS (10x higher)
+D_AMPA = 1e6;  % channel/cm^2; check
+D_GABA = 1e6;  % channel/cm^2; check
 
 Gp_AMPA = @(r,dl) Gs_AMPA * D_AMPA * 2*pi*r*dl;
 Gp_GABA = @(r,dl) Gs_GABA * D_GABA * 2*pi*r*dl;
@@ -354,7 +359,7 @@ plot(sim_time, AMPA_cond);
 ylabel('Conductance [nS]'); xlabel('Time [ms]');
 
 %% Specify input times
-AMPA_inputt = [20,30] .* 1e-5;
+AMPA_inputt = [20] .* 1e-5;
 GABA_inputt = [] .* 1e-5;
 
 %% Insert synapses: construct matrix G(t)
