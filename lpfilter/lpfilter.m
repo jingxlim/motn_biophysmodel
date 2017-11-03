@@ -8,13 +8,13 @@
 clr;
 
 %% Set up ODE waitbar
-% options = odeset('OutputFcn',@odewbar)  % ODE wait bar
-options = odeset('OutputFcn',@odeprog,'Events',@odeabort)  % ODE Progress Bar and Interrupt
+options = odeset('OutputFcn',@odewbar)  % ODE wait bar
+% options = odeset('OutputFcn',@odeprog,'Events',@odeabort)  % ODE Progress Bar and Interrupt
 
 %% Download file
 new = 0;
 
-url = 'http://neuromorpho.org/dableFiles/cameron/CNG%20version/HP72N6B.CNG.swc';
+url = 'http://neuromorpho.org/dableFiles/jacobs/CNG%20version/202-2-23nj.CNG.swc';
 name_split = strsplit(url, '/');
 origname = name_split(end);
 filename = char(strrep(origname, 'swc', 'txt'));
@@ -31,7 +31,7 @@ if new  save(datafile,'fdata','data'); end  % save data to file
 load(datafile) % variable name is data
 
 cmprt = data(:,1);
-type = data(:,2);  % 1-soma, 2-axon, 3-dendrite
+type = data(:,2);  % 1-soma, 2-axon, 3-basal dendrite, 4-apical dendrite
 x = data(:,3) * 1e-4;  % cm
 y = data(:,4) * 1e-4;  % cm
 z = data(:,5) * 1e-4;  % cm
@@ -49,7 +49,7 @@ for i=1:numel(cmprt)
     y_cmprt = y(i);
     z_cmprt = z(i);
     
-    % text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',5);
+    text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',5);
     
     parent_cmprt = parent(i);
     
@@ -148,9 +148,9 @@ end
 N = size(cmprt,1);  % number of compartments
 
 % extrinsic values for compartment j
-C = @(r,dl) 2*pi*r*dl*Cm;
-gi = @(r,dl) (pi*r^2)/(dl*Ri);
-gm = @(r,dl) (2*pi*r*dl)/Rm;
+C = @(r,dl) 2*pi*r*dl*Cm;  % uF
+gi = @(r,dl) (pi*r^2)/(dl*Ri);  % ohm^-1
+gm = @(r,dl) (2*pi*r*dl)/Rm;  % ohm^-1
 
 % initialize and construct matrix A
 A_ = zeros(N);
@@ -199,7 +199,7 @@ B = eye(N).*(1./Cm_matrix);
 
 % construct U vector
 Iapp = 1e-9;  % mA
-inj_cmprt = 348;
+inj_cmprt = 207;
 U = zeros(N,1);
 U(inj_cmprt,1) = Iapp;
 
@@ -274,10 +274,10 @@ saveas(gcf, 'ss_voltage.png');
 % system of differential equations
 dVdt = @(V) A*V + B*U;
 
-t_span = 0:1e2:1e3;
+t_span = 0:1e2:1e5;  % us
 T_span = t_span/(Rm*Cm);
 
-[t,V] = ode23(@(t,V) dVdt(V), t_span, zeros(N,1),options);
+[t,V] = ode23(@(t,V) dVdt(V), t_span, zeros(N,1), options);
 
 figure(11); clf; hold on;
 plot(T_span,V(:,inj_cmprt),'DisplayName','V_{injection}');
@@ -299,10 +299,10 @@ end
 B = B_ ./ repmat(Cm_matrix,1,2);
 
 %% Tune synaptic input
-tp_AMPA = 0.05e-3;  % ms
-tp_GABA = 1e-3;  % ms
-Gs_AMPA = 4e-12; % 40e-12;  % pS
-Gs_GABA = 400e-12;  % pS (10x higher)
+tp_AMPA = 0.05e3;  % ms -> us
+tp_GABA = 1e3;  % ms -> us
+Gs_AMPA = 40e-12;  % pS -> S
+Gs_GABA = 400e-12;  % pS -> S (10x higher)
 D_AMPA = 1e6;  % channel/cm^2; check
 D_GABA = 1e6;  % channel/cm^2; check
 
@@ -312,7 +312,7 @@ Gp_GABA = @(r,dl) Gs_GABA * D_GABA * 2*pi*r*dl;
 g_AMPA_ = @(t,r,dl) (t/tp_AMPA).*exp(1-(t/tp_AMPA)).*Gp_AMPA(r,dl);
 g_GABA_ = @(t,r,dl) (t/tp_GABA).*exp(1-(t/tp_GABA)).*Gp_GABA(r,dl);
 
-sim_time = 0:1e-5:1e-2;
+sim_time = 0:1e1:2e4;  % us
 figure(3); clf;
 
 % Plot AMPA and GABA synaptic inputs on separate axes
@@ -320,11 +320,11 @@ subplot(2,1,2); hold on;
 yyaxis left
 plot(sim_time, g_AMPA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
      'DisplayName','AMPA');
-ylabel('AMPA conductance [pS]')
+ylabel('AMPA conductance [S]')
 yyaxis right
 plot(sim_time, g_GABA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
      'DisplayName','GABA');
-ylabel('GABA conductance [pS]'); xlabel('Time [ms]');
+ylabel('GABA conductance [S]'); xlabel('Time [us]');
 legend('show'); title('Normalized synaptic inpuits');
 
 % Plot AMPA and GABA synaptic inputs on the same axis
@@ -333,34 +333,31 @@ plot(sim_time, g_AMPA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
      'DisplayName','AMPA');
 plot(sim_time, g_GABA_(sim_time, radius(inj_cmprt), length(inj_cmprt)),...
      'DisplayName','GABA');
-ylabel('Conductance [pS]'); xlabel('Time [ms]');
+ylabel('Conductance [S]'); xlabel('Time [us]');
 legend('show'); title('Synaptic inputs')
 
 %% Create synaptic input trains
-sim_time = 0:1e-5:1e-3;
-sim_t = 0:1e-5/2:1e-3;
+
+% Specify input times
+AMPA_inputt = randi([0 100],1,50) .* 1e2;
+GABA_inputt = [] .* 1e-5;
+
 g_AMPA = @(t,inputt,r,dl) ((t-inputt)/tp_AMPA).*exp(1-((t-inputt)/tp_AMPA))...
            .*Gp_AMPA(r,dl);
 g_GABA = @(t,inputt,r,dl) ((t-inputt)/tp_GABA).*exp(1-((t-inputt)/tp_GABA))...
            .*Gp_GABA(r,dl);
        
-AMPA_inputt = [0, 10, 30, 40, 60, 90] .* 1e-5;
 AMPA_cond = zeros(size(sim_time));
-% cell_cond = {};
+
 for i=1:numel(AMPA_inputt)
     inputt = AMPA_inputt(i);
     cond = @(t) subplus(g_AMPA(t,inputt,radius(inj_cmprt),length(inj_cmprt)));
-    % cell_cond{end+1} = cond;
     AMPA_cond = AMPA_cond + cond(sim_time);
 end
 
 figure(4); clf; hold on;
 plot(sim_time, AMPA_cond);
 ylabel('Conductance [nS]'); xlabel('Time [ms]');
-
-%% Specify input times
-AMPA_inputt = [20] .* 1e-5;
-GABA_inputt = [] .* 1e-5;
 
 %% Insert synapses: construct matrix G(t)
 G_ = @(t) make_G_(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,AMPA_inputt,GABA_inputt);
@@ -390,9 +387,15 @@ dVdt = @(t,V) A*V + B*U(t) + G(t)*V;
 
 sim_T = sim_time/(Rm*Cm);
 
-[t,V] = ode23(@(t,V) dVdt(t,V), sim_time, zeros(N,1));
+[t,V] = ode23(@(t,V) dVdt(t,V), sim_time, zeros(N,1), options);
 
 figure(7); clf; hold on;
-plot(sim_T,V(:,inj_cmprt),'DisplayName','V_{soma}');
+plot(sim_T,V(:,inj_cmprt),'DisplayName','V_{injection}');
+plot(sim_T,V(:,1),'DisplayName','V_{soma}');
 title('Time evolution of V(X,T)');
 xlabel('T'); ylabel('V [mV]'); legend('show');
+saveas(gcf, 'output.png');
+
+% save data
+outfile = strcat('data_',datestr(datetime('now'),'yyyyMMdd_HHmmss'));
+save(outfile, 'AMPA_inputt', 'GABA_inputt', 'V');

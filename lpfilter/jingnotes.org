@@ -1,6 +1,8 @@
 #+STARTUP: entitiespretty
 
 * Resources
+- selected neuron: http://neuromorpho.org/neuron_info.jsp?neuron_name=202-2-23nj
+** archived
 - Selected neuron: http://neuromorpho.org/neuron_info.jsp?neuron_name=HP72N6B
 - Reference article (PMID: 8132869): https://www.ncbi.nlm.nih.gov/pubmed/8132869
 - Other articles about selected neurons: https://www.ncbi.nlm.nih.gov/pubmed/?term=N%C3%BA%C3%B1ez-Abades+PA%5BAuthor%5D+Genioglossal+Motoneurons%5Btitle%5D
@@ -85,3 +87,9 @@ CLOSED: [2017-10-29 Sun 01:52]
 ** [master 6bc5fd8] matrix U takes in g values derived from the shape of synaptic input
  5 files changed, 59 insertions(+), 10 deletions(-)
  rewrite lpfilter/make_U.m (100%)
+* 17NOV01
+** [master 3eab90f] timed ode23; 20 mins and still not at steady state
+ 3 files changed, 15 insertions(+), 10 deletions(-)
+ rewrite lpfilter/morpho.png (99%)
+** new contenders
+- 559: http://neuromorpho.org/neuron_info.jsp?neuron_name=v_e_moto1
