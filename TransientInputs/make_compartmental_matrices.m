@@ -23,23 +23,6 @@ elseif nargin > 7
 end
 
 num_rows = sum(n);
-% N = cumsum(n);
-
-%Fix length and radius vectors based on n
-% R = zeros(num_rows,1);
-% L = zeros(num_rows,1);
-% ni = 1;
-% for k = 1:num_rows
-%     if k <= N(ni)
-%         R(k) = r(ni);
-%         L(k) = l(ni)/n(ni);
-%     else
-%         ni = ni+1;
-%         R(k) = r(ni);
-%         L(k) = l(ni)/n(ni);
-%     end
-% end
-
 lambda = sqrt(Rm/Ri*r/2);
 L = l./lambda;
 c = 2.*r.*pi.*L.*Cm; %capacitance of membrane segments
