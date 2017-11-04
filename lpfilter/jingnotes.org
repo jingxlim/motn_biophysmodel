@@ -93,3 +93,12 @@ CLOSED: [2017-10-29 Sun 01:52]
  rewrite lpfilter/morpho.png (99%)
 ** new contenders
 - 559: http://neuromorpho.org/neuron_info.jsp?neuron_name=v_e_moto1
+* 17NOV02
+** [master ad67f3c] changed to stellate cell model; figured out simulation times
+ 8 files changed, 851 insertions(+), 31 deletions(-)
+ create mode 100644 lpfilter/202-2-23nj.CNG.mat
+ create mode 100644 lpfilter/202-2-23nj.CNG.txt
+ create mode 100644 lpfilter/208-3-5LL.CNG.mat
+ create mode 100644 lpfilter/208-3-5LL.CNG.txt
+ rewrite lpfilter/morpho.png (99%)
+ rewrite lpfilter/ss_voltage.png (99%)

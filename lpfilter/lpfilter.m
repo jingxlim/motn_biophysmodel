@@ -7,9 +7,16 @@
 %% Refresh workspace
 clr;
 
-%% Set up ODE waitbar
-options = odeset('OutputFcn',@odewbar)  % ODE wait bar
-% options = odeset('OutputFcn',@odeprog,'Events',@odeabort)  % ODE Progress Bar and Interrupt
+%% Global settings
+% Set up ODE waitbar
+options = odeset('OutputFcn',@odewbar);  % ODE wait bar
+% options = odeset('OutputFcn',@odeprog,'Events',@odeabort);  % ODE Progress Bar and Interrupt
+
+% Set up simulation parameters
+sim_time = 0:1e1:3e4;  % us
+
+% Initialise simulation
+outdate = datestr(datetime('now'),'yyyyMMdd_HHmmss');
 
 %% Download file
 new = 0;
@@ -24,6 +31,7 @@ if new    outfilename = websave(filename,url); end
 dat = table2array(readtable(filename));  % import file and convert to array
 fdata = dat(:,all(~isnan(dat)));  % remove columns with nans
 data = fdata(fdata(:,2)~=2,:);  % remove axons
+% data = [data(1,:);data(data(2:end,2)~=1,:)];  % remove extra somas
 datafile = strrep(filename,'txt', 'mat');
 if new  save(datafile,'fdata','data'); end  % save data to file
 
@@ -195,13 +203,29 @@ Cm_matrix = repmat(Cm_all,1,N);
 A = A_ ./ Cm_matrix;
 
 %% Response to current step: construct matrices B and U
-B = eye(N).*(1./Cm_matrix);
+B_mat = eye(N).*(1./Cm_matrix);
 
 % construct U vector
 Iapp = 1e-9;  % mA
 inj_cmprt = 207;
-U = zeros(N,1);
-U(inj_cmprt,1) = Iapp;
+
+mu = Iapp;
+sigma = 0.8;
+U_mat = @(t) makeU(t,inj_cmprt,N,mu,sigma);
+
+% check changes in conductance in G matrix
+figure(); clf; hold on;
+Iapp_rand = mu+sigma.*rand(1,size(sim_time,2));
+plot(sim_time, Iapp_rand)
+
+for i=1:numel(sim_time)
+    t = sim_time(i);
+    mat_U = U_mat(t);
+    plot(t, mat_U(inj_cmprt,1),'.');
+end
+
+ylabel('I_{app} [mA]'); xlabel('Time [us]');
+saveas(gcf, strcat('Iapp',outdate,'.png'));
 
 %% Find steady state voltages in response to current step
 
@@ -272,18 +296,54 @@ saveas(gcf, 'ss_voltage.png');
 %% Solve for voltage over time
 
 % system of differential equations
-dVdt = @(V) A*V + B*U;
+dvdt = @(t,v) A*v + B_mat*U_mat(t);
 
-t_span = 0:1e2:1e5;  % us
-T_span = t_span/(Rm*Cm);
+sim_T = sim_time/(Rm*Cm);
 
-[t,V] = ode23(@(t,V) dVdt(V), t_span, zeros(N,1), options);
+[t,v] = ode23(@(t,v) dvdt(t,v), sim_time, zeros(N,1), options);
 
-figure(11); clf; hold on;
-plot(T_span,V(:,inj_cmprt),'DisplayName','V_{injection}');
-plot(T_span,V(:,1),'DisplayName','V_{soma}');
+figure(3); clf; hold on;
+plot(sim_T,v(:,inj_cmprt),'DisplayName','V_{injection}');
+plot(sim_T,v(:,1),'DisplayName','V_{soma}');
 title('Time evolution of V(X,T) in response to I_{app}');
 xlabel('T'); ylabel('V [mV]'); legend('show');
+
+%% spectral analysis for I_app input
+fs = size(sim_time,2);
+psa = [inj_cmprt,1];
+figure(4); clf; hold on;
+
+x = Iapp_rand';
+n = size(x,1);
+xdft = fft(x);
+xdft = xdft(1:n/2+1);
+psdx = (1/(fs*n)) * abs(xdft).^2;
+psdx(2:end-1) = 2*psdx(2:end-1);
+freq = 0:fs/n:fs/2;
+subplot(2,1,1)
+plot(freq,10*log10(psdx),'DisplayName', 'Input current')
+
+xlabel('Frequency (Hz)')
+ylabel('Power/Frequency (dB/Hz)')
+
+subplot(2,1,2); hold on;
+for i=1:numel(psa)
+    ccmprt = psa(i);
+    x = v(:,ccmprt);
+    n = size(x,1);
+    xdft = fft(x);
+    xdft = xdft(1:n/2+1);
+    psdx = (1/(fs*n)) * abs(xdft).^2;
+    psdx(2:end-1) = 2*psdx(2:end-1);
+    freq = 0:fs/n:fs/2;
+    plot(freq,10*log10(psdx),'DisplayName', 'cmprt '+string(ccmprt))
+end
+
+grid on
+suptitle('Periodogram Using FFT')
+xlabel('Frequency (Hz)')
+ylabel('Power/Frequency (dB/Hz)')
+legend('show')
 
 %% Reponse to synaptic input: construct matrix B
 E_AMPA = 0;  % mV
@@ -312,7 +372,6 @@ Gp_GABA = @(r,dl) Gs_GABA * D_GABA * 2*pi*r*dl;
 g_AMPA_ = @(t,r,dl) (t/tp_AMPA).*exp(1-(t/tp_AMPA)).*Gp_AMPA(r,dl);
 g_GABA_ = @(t,r,dl) (t/tp_GABA).*exp(1-(t/tp_GABA)).*Gp_GABA(r,dl);
 
-sim_time = 0:1e1:2e4;  % us
 figure(3); clf;
 
 % Plot AMPA and GABA synaptic inputs on separate axes
@@ -339,7 +398,8 @@ legend('show'); title('Synaptic inputs')
 %% Create synaptic input trains
 
 % Specify input times
-AMPA_inputt = randi([0 100],1,50) .* 1e2;
+AMPA_inputt = randi([0 100],1,1000) .* 1e2;
+%AMPA_inputt = [0] .* 1e2;
 GABA_inputt = [] .* 1e-5;
 
 g_AMPA = @(t,inputt,r,dl) ((t-inputt)/tp_AMPA).*exp(1-((t-inputt)/tp_AMPA))...
@@ -357,7 +417,8 @@ end
 
 figure(4); clf; hold on;
 plot(sim_time, AMPA_cond);
-ylabel('Conductance [nS]'); xlabel('Time [ms]');
+ylabel('Conductance [S]'); xlabel('Time [us]');
+saveas(gcf, strcat('input',outdate,'.png'));
 
 %% Insert synapses: construct matrix G(t)
 G_ = @(t) make_G_(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,AMPA_inputt,GABA_inputt);
@@ -370,6 +431,9 @@ for i=1:numel(sim_time)
     G_mat = G(t);
     plot(t, G_mat(inj_cmprt,inj_cmprt),'.');
 end
+
+ylabel('Conductance changes [S]'); xlabel('Time [us]');
+saveas(gcf, strcat('g',outdate,'.png'));
 %% Response to synaptic input: construct matrix U(t)
 U = @(t) make_U(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,AMPA_inputt,GABA_inputt);
 
@@ -380,6 +444,9 @@ for i=1:numel(sim_time)
     U_mat = U(t);
     plot(t, U_mat(2*inj_cmprt-1,1),'.');
 end
+
+ylabel('Conductance [S]'); xlabel('Time [us]');
+saveas(gcf,strcat('u',outdate,'.png'));
 %% Solve for voltage over time
 
 % system of differential equations
@@ -394,8 +461,51 @@ plot(sim_T,V(:,inj_cmprt),'DisplayName','V_{injection}');
 plot(sim_T,V(:,1),'DisplayName','V_{soma}');
 title('Time evolution of V(X,T)');
 xlabel('T'); ylabel('V [mV]'); legend('show');
-saveas(gcf, 'output.png');
+saveas(gcf, strcat('output',outdate,'.png'));
 
 % save data
-outfile = strcat('data_',datestr(datetime('now'),'yyyyMMdd_HHmmss'));
+outfile = strcat('data_',outdate);
 save(outfile, 'AMPA_inputt', 'GABA_inputt', 'V');
+
+%% spectral analysis
+figure(8); clf; hold on;
+plot(sim_T,V(:,inj_cmprt),'DisplayName','V_{injection}');
+plot(sim_T,V(:,1),'DisplayName','V_{soma}');
+title('Time evolution of V(X,T)');
+xlabel('T'); ylabel('V [mV]'); legend('show');
+saveas(gcf, strcat('output',outdate,'.png'));
+
+% figure(9); clf; hold on;
+% psa = [1, inj_cmprt];
+% for i=1:numel(psa)
+%     ccmprt = psa(i);
+%     x = V(:,ccmprt);
+%     y = fft(x);
+%     n = size(x,1);          % number of samples
+%     f = (0:n-1)*(fs/n);     % frequency range
+%     power = abs(y).^2/n;    % power of the DFT
+%     plot(f,power)
+% end
+% ymax = max(power(power~=max(power)));
+% xlabel('Frequency'); ylabel('Power');
+% xlim([0 10]);
+% ylim([0 0.0001]);
+
+fs = size(sim_time,2);
+figure(13); clf; hold on;
+for i=1:numel(1)
+    % ccmprt = psa(i);
+    x = Iapp_rand;
+    n = size(x,2);
+    xdft = fft(x);
+    xdft = xdft(1:n/2+1);
+    psdx = (1/(fs*n)) * abs(xdft).^2;
+    psdx(2:end-1) = 2*psdx(2:end-1);
+    freq = 0:fs/n:fs/2;
+    plot(freq,10*log10(psdx))
+end
+
+grid on
+title('Periodogram Using FFT')
+xlabel('Frequency (Hz)')
+ylabel('Power/Frequency (dB/Hz)')
