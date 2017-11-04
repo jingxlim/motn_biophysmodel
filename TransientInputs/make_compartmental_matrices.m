@@ -14,7 +14,7 @@
 % each compartment, and u is the input vector containing the current
 % applied to each compartment.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [A,B,R,L] = make_compartmental_matrices(Ri,Rm,Cm,r,l,n,parents)
+function [A,B,L] = make_compartmental_matrices(Ri,Rm,Cm,r,l,n,parents)
 %Check inputs
 if nargin < 7
     error('Not enough input arguments');
@@ -23,26 +23,28 @@ elseif nargin > 7
 end
 
 num_rows = sum(n);
-N = cumsum(n);
+% N = cumsum(n);
 
 %Fix length and radius vectors based on n
-R = zeros(num_rows,1);
-L = zeros(num_rows,1);
-ni = 1;
-for k = 1:num_rows
-    if k <= N(ni)
-        R(k) = r(ni);
-        L(k) = l(ni)/n(ni);
-    else
-        ni = ni+1;
-        R(k) = r(ni);
-        L(k) = l(ni)/n(ni);
-    end
-end
+% R = zeros(num_rows,1);
+% L = zeros(num_rows,1);
+% ni = 1;
+% for k = 1:num_rows
+%     if k <= N(ni)
+%         R(k) = r(ni);
+%         L(k) = l(ni)/n(ni);
+%     else
+%         ni = ni+1;
+%         R(k) = r(ni);
+%         L(k) = l(ni)/n(ni);
+%     end
+% end
 
-c = 2.*R.*pi.*L.*Cm; %capacitance of membrane segments
-gi = (1./Ri).*(pi.*R.^2)./L; %axial conductance of segments
-gm = (pi./Rm).*2.*R.*L; %membrane conductance of segments
+lambda = sqrt(Rm/Ri*r/2);
+L = l./lambda;
+c = 2.*r.*pi.*L.*Cm; %capacitance of membrane segments
+gi = (1./Ri).*(pi.*r.^2)./L; %axial conductance of segments
+gm = (pi./Rm).*2.*r.*L; %membrane conductance of segments
 
 % Set up Matrices
 A = zeros(num_rows);

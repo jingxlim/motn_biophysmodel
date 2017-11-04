@@ -9,12 +9,17 @@
 % components of length and uses the sqrt function to calculate absolute
 % length from these components.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [len] = comp_len(dend)
+function [l] = comp_len(dend)
 % get the length of each component
 l_xyz = comp_len_xyz(dend);
 % magnitude
-len = sqrt(l_xyz(:,1).^2+l_xyz(:,2).^2+l_xyz(:,3).^2);
-len = len';
+l = sqrt(l_xyz(:,1).^2+l_xyz(:,2).^2+l_xyz(:,3).^2);
+% soma with zero value
+soma = dend(:,2)==1;
+z = l==0;
+l(soma & z) = sum(l(soma))/sum(soma);
+
+l = l';
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

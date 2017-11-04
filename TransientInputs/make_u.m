@@ -8,6 +8,6 @@ u(c) = heaviside(t+t_shift);
 
 
 % decaying exp
-tpeak = 1; % ms
-u(c) = exp(-t/tpeak);
+% tpeak = 1; % ms
+% u(c) = exp(-t/tpeak);
 end
