@@ -1,6 +1,5 @@
 function U = makeU(t,inj_cmprt,N,mu,sigma,seed)
 
-rng(seed);
 U = zeros(N,1);
 U(inj_cmprt,1) = mu + sigma.*rand(1);
 

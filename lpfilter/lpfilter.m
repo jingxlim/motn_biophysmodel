@@ -81,6 +81,7 @@ for i=1:numel(cmprt)
 end
 xlabel('x [cm]');ylabel('y [cm]');zlabel('z [cm]');
 title('Dendritic tree morphology');
+grid on;
 view(3); rotate3d on;
 saveas(gcf, 'morpho.png')
 
@@ -259,6 +260,20 @@ figure(2); clf; hold on;
 for i=1:numel(branches)
     plot(position{i},branches{i},'.-');
 end
+
+injects = round(linspace(142,173,5));
+
+for i=1:numel(injects)
+    inject = injects(i);
+    
+    for i=1:size(branches,2)
+        branch = branches{i};
+        if find(branch==inject)
+            index = [i, find(branch==inject)]
+        end
+    end    
+    text(position{index(1)}(index(2)), inject+10, num2str(inject), 'FontSize',10);
+end
 xlabel('Electrontonic distance from soma'); ylabel('Compartment number');
 saveas(gcf, 'branching.png');
 
@@ -273,27 +288,17 @@ seed = 0;
 rng(seed)  % set random generator seed to 0
 Iapp_rand = mu+sigma.*rand(1,size(sim_time,2));  % to plot
 
-% check changes in conductance in U matrix
 figure(3); clf; hold on;
-plot(sim_time, Iapp_rand)
+plot(sim_time, Iapp_rand);
 ylabel('I_{app} [mA]'); xlabel('Time [us]');
+title('Template Iapp')
+
+v_store={}  % initialize data store
 
 figure(4); clf; hold on;
-title('Time evolution of V(X,T) in response to I_{app}');
-xlabel('T'); ylabel('V [mV]'); legend('show');
-
-figure(5); clf; hold on;
-subplot(1,2,1);
-xlabel('Frequency (Hz)')
-ylabel('Power/Frequency difference (dB/Hz)')
-
-figure(5); clf; hold on;
-subplot(1,2,2);
-xlabel('Frequency (Hz)')
-ylabel('P/F diff (dB/Hz)')
-xlim([0 50]);
-
-injects = linspace(142,173,5);
+set(gcf,'units','points','position',[100,100,1000,400])
+subplot(1,2,1); hold on;
+subplot(1,2,2); hold on;
 
 for j=1:numel(injects)
     inject = injects(j);
@@ -301,12 +306,23 @@ for j=1:numel(injects)
     % construct U vector
     U_mat = @(t) makeU(t,inject,N,mu,sigma,seed);
     
+    % check changes in conductance in U matrix
+    figure(); clf; hold on;
+    set(gcf,'units','points','position',[100,100,1000,400])
+    title('I_{app} into compartment '+string(inject))
+    
+    subplot(1,2,1); hold on;
+    ylabel('I_{app} [mA]'); xlabel('Time [us]');
+    
+    u = zeros(size(sim_time));
+    rng(seed) % reseed
     for i=1:numel(sim_time)
         t = sim_time(i);
         mat_U = U_mat(t);
-        figure(3); plot(t, mat_U(inject,1),'.');
+        u(i) = mat_U(inject,1);
     end
-
+    plot(sim_time,u);
+    
     % Solve for voltage over time
     % system of differential equations
     dvdt = @(t,v) A*v + B_mat*U_mat(t);
@@ -314,19 +330,26 @@ for j=1:numel(injects)
     sim_T = sim_time/(Rm*Cm);
 
     [t,v] = ode23(@(t,v) dvdt(t,v), sim_time, zeros(N,1), options);
+    
+    v_store{end+1} = v;  % save data    
 
-    figure(4);
-    plot(sim_T,v(:,inject),'DisplayName','V_{injection}');
+    subplot(1,2,2); hold on;
+    plot(sim_T,v(:,inject),'DisplayName','V_{'+string(inject)+'}');
     plot(sim_T,v(:,1),'DisplayName','V_{soma}');
+    title('Time evolution of V(X,T) in response to I_{app}');
+    xlabel('T'); ylabel('V [mV]'); legend('show');    
+    saveas(gcf, strcat('IO_Iapp_',num2str(inject),outdate,'.png'));
 
     % spectral analysis for I_app input
     fs = size(sim_time,2);
-    psa = [inject,1];    
+    psa = [inject,1];
     
-    figure(5+j); clf; hold on;
+    figure(); clf; hold on;
     set(gcf,'units','points','position',[100,100,1000,400])
+    suptitle('Periodogram Using FFT')
     
-    figure(5+j); subplot(1,2,1); hold on;
+    subplot(1,2,1); hold on;
+    title('Current input')
     x = Iapp_rand';
     n = size(x,1);
     xdft = fft(x);
@@ -337,7 +360,8 @@ for j=1:numel(injects)
     plot(freq,10*log10(psdx),'DisplayName', 'Input current')
     xlabel('Frequency (Hz)'); ylabel('Power/Frequency (dB/Hz)')    
 
-    figure(5+j); subplot(1,2,2); hold on;
+    subplot(1,2,2); hold on;
+    title('Voltage output')
     powers = {};
     for i=1:numel(psa)
         ccmprt = psa(i);
@@ -356,21 +380,29 @@ for j=1:numel(injects)
     grid on; legend('show')
     saveas(gcf, strcat('spectra_',num2str(inject),'_Iapp',outdate,'.png'));
 
-    figure(5); subplot(1,2,1);
-    plot(freq, powers{2}-powers{1});
+    figure(4); subplot(1,2,1);
+    plot(freq, powers{2}-powers{1},'DisplayName', 'cmprt '+string(inject));
 
-    figure(5); subplot(1,2,2);
-    plot(freq, powers{2}-powers{1});
+    figure(4); subplot(1,2,2);
+    plot(freq, powers{2}-powers{1},'DisplayName', 'cmprt '+string(inject));
     
 end
 
-figure(3); saveas(gcf, strcat('Iapp',outdate,'.png'));
-
 figure(4);
-saveas(gcf, strcat('output_Iapp',outdate,'.png'));
-
-figure(5); suptitle('Periodogram Using FFT')
+subplot(1,2,1);
+xlabel('Frequency (Hz)')
+ylabel('Power/Frequency difference (dB/Hz)')
+legend('show', 'Location', 'southeast')
+subplot(1,2,2);
+xlabel('Frequency (Hz)')
+ylabel('P/F diff (dB/Hz)')
+legend('show', 'Location', 'southeast')
+xlim([0 50]);
 saveas(gcf, strcat('spectradiff_Iapp',outdate,'.png'));
+
+% save data
+outfile = strcat('data_',outdate);
+save(outfile, 'sim_time', 'Iapp_rand', 'v_store');
 
 %% Find steady state voltages in response to current step
 
@@ -446,8 +478,8 @@ legend('show'); title('Synaptic inputs')
 %% Create synaptic input trains
 
 % Specify input times
-AMPA_inputt = rand(1,1000) .* end_time;
-% AMPA_inputt = [0] .* 1e2;
+% AMPA_inputt = rand(1,1000) .* end_time;
+AMPA_inputt = horzcat([0.01], [0.16:0.03:0.19], [0.36,0.39,0.41]) .* end_time;
 GABA_inputt = [] .* 1e-5;
 
 g_AMPA = @(t,inputt,r,dl) ((t-inputt)/tp_AMPA).*exp(1-((t-inputt)/tp_AMPA))...
@@ -464,11 +496,19 @@ for i=1:numel(AMPA_inputt)
 end
 
 figure(51); clf; hold on;
-plot(sim_time, AMPA_cond);
-plot([AMPA_inputt;AMPA_inputt], [zeros(size(AMPA_inputt));ones(size(AMPA_inputt))*1e-9], 'k-');
-set(gca,'TickDir','out') % draw the tick marks on the outside
+% set(gcf,'units','points','position',[100,100,1000,400])
+subplot(2,1,1); hold on;
+inputt=0;
+cond = @(t) subplus(g_AMPA(t,inputt,radius(inj_cmprt),length(inj_cmprt)));
+plot(sim_time, cond(sim_time));
+xlim([0 end_time/10])
 ylabel('Conductance [S]'); xlabel('Time [us]');
-set(gcf,'units','points','position',[100,100,1000,400])
+subplot(2,1,2); hold on;
+plot(sim_time, AMPA_cond);
+plot([AMPA_inputt;AMPA_inputt], [zeros(size(AMPA_inputt));ones(size(AMPA_inputt))*0.5e-10], 'k-', 'LineWidth', 1);
+set(gca,'TickDir','out') % draw the tick marks on the outside
+xlim([0 end_time/2])
+ylabel('Conductance [S]'); xlabel('Time [us]');
 saveas(gcf, strcat('input',outdate,'.png'));
 
 %% Insert synapses: construct matrix G(t)
