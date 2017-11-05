@@ -22,7 +22,6 @@ tpeak = 50; % us
 g = 0.001;
 
 u(2*c-1) = (t-t_shift)/tpeak*exp(1-(t-t_shift)/tpeak)*g;
-% u(2*ci) = 0;
 
 if any(u<0)
     ii0 = u<0;

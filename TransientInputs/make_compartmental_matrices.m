@@ -36,8 +36,8 @@ Ei = Er;                        % mV
 A = zeros(n);
 B = zeros(n,2*n);
 for j = 1:n
-    B(j,2*j-1) = (1/cm(j))*((Ee(j)-Er(j))/(Ee(j)-Ei(j)));
-    B(j,2*j) = (1/cm(j))*((Ei(j)-Er(j))/(Ee(j)-Ei(j)));
+    B(j,2*j-1) = -(1/cm(j))*((Ee(j)-Er(j))/(Ee(j)-Ei(j)));
+    B(j,2*j) = -(1/cm(j))*((Ei(j)-Er(j))/(Ee(j)-Ei(j)));
     children = find(parents==j);
     if parents(j) <= 0
         gi(j) = 0;
