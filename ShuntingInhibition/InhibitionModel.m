@@ -1,4 +1,5 @@
 %%%%
+tic;  % Start the clock
 
 neuron = load('/Users/Simon/Google Drive/Graduate School/Hopkins/Models of the Neuron/Homeworks/Project1/motn_biophysmodel/ShuntingInhibition/202-2-23nj.CNG.txt');
 axon = find(neuron(:,2)==2);
@@ -65,6 +66,9 @@ Er = ones(num_compartments,1)*Er;
 n = ones(num_compartments,1);
 [A,B,R,~,C] = make_compartmental_matrices_inhibition(Ri,Rm,Cm,Er,Ee,Ei,neuron(:,6),l,n,neuron(:,7));
 
+disp('Matrices made!');
+toc
+
 %Set up input vector u
 u_excite = zeros(2*num_compartments,1);
 u_inhibit = zeros(2*num_compartments,1);
@@ -91,15 +95,31 @@ for j = 1:num_compartments
 end
 
 t_shift_excite = 100;
-t_shift_inhibit = 100;
+t_shift_inhibit_b4 = 75;
+t_shift_inhibit_simul = 100;
+t_shift_inhibit_aft = 125;
 
-DvpDt = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,t_shift_inhibit,27,25,num_compartments) + ...
-    make_G(make_u(t,t_shift_excite,t_shift_inhibit,27,25,num_compartments),C)*vp;
+DvpDt_b4 = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,t_shift_inhibit_b4,27,25,num_compartments) + ...
+    make_G(make_u(t,t_shift_excite,t_shift_inhibit_b4,27,25,num_compartments),C)*vp;
+DvpDt_simul = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,t_shift_inhibit_simul,27,25,num_compartments) + ...
+    make_G(make_u(t,t_shift_excite,t_shift_inhibit_simul,27,25,num_compartments),C)*vp;
+DvpDt_aft = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,t_shift_inhibit_aft,27,25,num_compartments) + ...
+    make_G(make_u(t,t_shift_excite,t_shift_inhibit_aft,27,25,num_compartments),C)*vp;
 tp = 0:1:1e4;
 
 v0 = zeros(num_compartments,1);
-[tr,Vp] = ode23(DvpDt,tp,v0); 
-V = zeros(size(Vp));
+[~,Vp_b4] = ode23(DvpDt_b4,tp,v0); 
+disp('Before Condition Finished!');
+toc
+[~,Vp_simul] = ode23(DvpDt_simul,tp,v0); 
+disp('Simultaneous Condition Finished!');
+toc
+[~,Vp_aft] = ode23(DvpDt_aft,tp,v0); 
+disp('After Condition Finished!');
+toc
+V_b4 = zeros(size(Vp_b4));
+V_simul = zeros(size(Vp_simul));
+V_aft = zeros(size(Vp_aft));
 
 Vss_excite = -inv(A+G_excite)*B*u_excite;
 Vss_inhibit = -inv(A+G_inhibit)*B*u_inhibit;
@@ -111,11 +131,44 @@ for n = 1:num_compartments
     if p > 0 && neuron(n,2)~=1
         x(n) = x(p) + l(n);
     end
-    V(:,n) = Vp(:,n)*(Ee(n)-Ei(n))+Er(n);
+    V_b4(:,n) = Vp_b4(:,n)*(Ee(n)-Ei(n))+Er(n);
+    V_simul(:,n) = Vp_simul(:,n)*(Ee(n)-Ei(n))+Er(n);
+    V_aft(:,n) = Vp_aft(:,n)*(Ee(n)-Ei(n))+Er(n);
     Vss_excite(n) = Vss_excite(n)*(Ee(n)-Ei(n))+Er(n);
     Vss_inhibit(n) = Vss_inhibit(n)*(Ee(n)-Ei(n))+Er(n);
 end
 X = x./lambda;
+T = tp./(Cm*Rm);
+
+%Plot Voltage Response at the Soma
+figure; grid on; hold on;
+plot(T,V_b4(:,1),'k.-');
+plot(T,V_simul(:,1),'b.-');
+plot(T,V_aft(:,1),'r.-');
+xlabel('Unitless Time [T]');
+ylabel('Voltage [mV]');
+legend('Before','Simultanenous','After');
+title('Soma Voltage Response Over Time');
+
+%Plot Voltage Response in the Excited Compartment
+figure; grid on; hold on;
+plot(T,V_b4(:,27),'k.-');
+plot(T,V_simul(:,27),'b.-');
+plot(T,V_aft(:,27),'r.-');
+xlabel('Unitless Time [T]');
+ylabel('Voltage [mV]');
+legend('Before','Simultanenous','After');
+title('Excited Compartment Voltage Response Over Time');
+
+%Plot Voltage Response in the Inhibited Compartment
+figure; grid on; hold on;
+plot(T,V_b4(:,25),'k.-');
+plot(T,V_simul(:,25),'b.-');
+plot(T,V_aft(:,25),'r.-');
+xlabel('Unitless Time [T]');
+ylabel('Voltage [mV]');
+legend('Before','Simultanenous','After');
+title('Inhibited Compartment Voltage Response Over Time');
 
 % %Plot voltage based on distance from the soma
 % figure; subplot(1,2,1); grid on; hold on;
