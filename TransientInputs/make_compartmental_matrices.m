@@ -50,9 +50,9 @@ for j = 1:n
         end
     end
     if isempty(children)
-        A(j,j) = -(gi(j)+gm(j)).*B(j,j);        
+        A(j,j) = -(gi(j)+gm(j)).*(1/c(j));        
     else
-        A(j,j) = -(sum(gi(children))+gi(j)+gm(j)).*B(j,j);
+        A(j,j) = -(sum(gi(children))+gi(j)+gm(j)).*(1/c(j));
     end
 end
 
