@@ -13,7 +13,8 @@ options = odeset('OutputFcn',@odewbar);  % ODE wait bar
 % options = odeset('OutputFcn',@odeprog,'Events',@odeabort);  % ODE Progress Bar and Interrupt
 
 % Set up simulation parameters
-sim_time = 0:1e1:3e4;  % us
+end_time = 5e3;
+sim_time = 0:1e0:end_time;  % us
 
 % Initialise simulation
 outdate = datestr(datetime('now'),'yyyyMMdd_HHmmss');
@@ -57,7 +58,7 @@ for i=1:numel(cmprt)
     y_cmprt = y(i);
     z_cmprt = z(i);
     
-    text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',5);
+    % text(x_cmprt, y_cmprt, z_cmprt, num2str(i), 'FontSize',5);
     
     parent_cmprt = parent(i);
     
@@ -202,41 +203,13 @@ end
 Cm_matrix = repmat(Cm_all,1,N);
 A = A_ ./ Cm_matrix;
 
-%% Response to current step: construct matrices B and U
+%% Response to current step: construct matrix B
 B_mat = eye(N).*(1./Cm_matrix);
 
-% construct U vector
-Iapp = 1e-9;  % mA
-inj_cmprt = 207;
-
-mu = Iapp;
-sigma = 0.8;
-U_mat = @(t) makeU(t,inj_cmprt,N,mu,sigma);
-
-% check changes in conductance in G matrix
-figure(); clf; hold on;
-Iapp_rand = mu+sigma.*rand(1,size(sim_time,2));
-plot(sim_time, Iapp_rand)
-
-for i=1:numel(sim_time)
-    t = sim_time(i);
-    mat_U = U_mat(t);
-    plot(t, mat_U(inj_cmprt,1),'.');
-end
-
-ylabel('I_{app} [mA]'); xlabel('Time [us]');
-saveas(gcf, strcat('Iapp',outdate,'.png'));
-
-%% Find steady state voltages in response to current step
-
-V = - inv(A)*B*U;
-
+%% Find location of compartments
 lambda = sqrt((Rm*radius)/(Ri*2));
 L = length./lambda;
 
-V_ = transpose(V);  % column vector of ss voltages over compartments
-
-%% Find location of compartments and plot steady state
 % find branch points
 u_parent = unique(parent);
 hist_parent = histc(parent(:),u_parent);
@@ -283,67 +256,142 @@ for i=1:numel(branches)
 end
 
 figure(2); clf; hold on;
-
 for i=1:numel(branches)
-    plot(position{i},V_(branches{i}),'-');
-    % text(position{i},V_(branches{i})+0.001, cellstr(string(branches{i})),'FontSize',8);
+    plot(position{i},branches{i},'.-');
 end
+xlabel('Electrontonic distance from soma'); ylabel('Compartment number');
+saveas(gcf, 'branching.png');
 
-xlabel('Electrontonic distance from soma'); ylabel('Steady state voltage [mV]');
-title('Steady-state voltage along cables: Injection into branch '+string(inj_cmprt));
-saveas(gcf, 'ss_voltage.png');
+%% Response to current step: construct matrix U
+% create Iapp input current
+Iapp = 1e-9;  % mA
 
-%% Solve for voltage over time
+mu = Iapp;  % mean
+sigma = 0.8;  % standard deviation
 
-% system of differential equations
-dvdt = @(t,v) A*v + B_mat*U_mat(t);
+seed = 0;
+rng(seed)  % set random generator seed to 0
+Iapp_rand = mu+sigma.*rand(1,size(sim_time,2));  % to plot
 
-sim_T = sim_time/(Rm*Cm);
-
-[t,v] = ode23(@(t,v) dvdt(t,v), sim_time, zeros(N,1), options);
-
+% check changes in conductance in U matrix
 figure(3); clf; hold on;
-plot(sim_T,v(:,inj_cmprt),'DisplayName','V_{injection}');
-plot(sim_T,v(:,1),'DisplayName','V_{soma}');
+plot(sim_time, Iapp_rand)
+ylabel('I_{app} [mA]'); xlabel('Time [us]');
+
+figure(4); clf; hold on;
 title('Time evolution of V(X,T) in response to I_{app}');
 xlabel('T'); ylabel('V [mV]'); legend('show');
 
-%% spectral analysis for I_app input
-fs = size(sim_time,2);
-psa = [inj_cmprt,1];
-figure(4); clf; hold on;
-
-x = Iapp_rand';
-n = size(x,1);
-xdft = fft(x);
-xdft = xdft(1:n/2+1);
-psdx = (1/(fs*n)) * abs(xdft).^2;
-psdx(2:end-1) = 2*psdx(2:end-1);
-freq = 0:fs/n:fs/2;
-subplot(2,1,1)
-plot(freq,10*log10(psdx),'DisplayName', 'Input current')
-
+figure(5); clf; hold on;
+subplot(1,2,1);
 xlabel('Frequency (Hz)')
-ylabel('Power/Frequency (dB/Hz)')
+ylabel('Power/Frequency difference (dB/Hz)')
 
-subplot(2,1,2); hold on;
-for i=1:numel(psa)
-    ccmprt = psa(i);
-    x = v(:,ccmprt);
+figure(5); clf; hold on;
+subplot(1,2,2);
+xlabel('Frequency (Hz)')
+ylabel('P/F diff (dB/Hz)')
+xlim([0 50]);
+
+injects = linspace(142,173,5);
+
+for j=1:numel(injects)
+    inject = injects(j);
+
+    % construct U vector
+    U_mat = @(t) makeU(t,inject,N,mu,sigma,seed);
+    
+    for i=1:numel(sim_time)
+        t = sim_time(i);
+        mat_U = U_mat(t);
+        figure(3); plot(t, mat_U(inject,1),'.');
+    end
+
+    % Solve for voltage over time
+    % system of differential equations
+    dvdt = @(t,v) A*v + B_mat*U_mat(t);
+
+    sim_T = sim_time/(Rm*Cm);
+
+    [t,v] = ode23(@(t,v) dvdt(t,v), sim_time, zeros(N,1), options);
+
+    figure(4);
+    plot(sim_T,v(:,inject),'DisplayName','V_{injection}');
+    plot(sim_T,v(:,1),'DisplayName','V_{soma}');
+
+    % spectral analysis for I_app input
+    fs = size(sim_time,2);
+    psa = [inject,1];    
+    
+    figure(5+j); clf; hold on;
+    set(gcf,'units','points','position',[100,100,1000,400])
+    
+    figure(5+j); subplot(1,2,1); hold on;
+    x = Iapp_rand';
     n = size(x,1);
     xdft = fft(x);
     xdft = xdft(1:n/2+1);
     psdx = (1/(fs*n)) * abs(xdft).^2;
     psdx(2:end-1) = 2*psdx(2:end-1);
     freq = 0:fs/n:fs/2;
-    plot(freq,10*log10(psdx),'DisplayName', 'cmprt '+string(ccmprt))
+    plot(freq,10*log10(psdx),'DisplayName', 'Input current')
+    xlabel('Frequency (Hz)'); ylabel('Power/Frequency (dB/Hz)')    
+
+    figure(5+j); subplot(1,2,2); hold on;
+    powers = {};
+    for i=1:numel(psa)
+        ccmprt = psa(i);
+        x = v(:,ccmprt);
+        n = size(x,1);
+        xdft = fft(x);
+        xdft = xdft(1:n/2+1);
+        psdx = (1/(fs*n)) * abs(xdft).^2;
+        psdx(2:end-1) = 2*psdx(2:end-1);
+        freq = 0:fs/n:fs/2;
+        power = 10*log10(psdx);
+        powers{end+1} = power;
+        plot(freq, power, 'DisplayName', 'cmprt '+string(ccmprt))
+    end
+    xlabel('Frequency (Hz)'); ylabel('Power/Frequency (dB/Hz)');
+    grid on; legend('show')
+    saveas(gcf, strcat('spectra_',num2str(inject),'_Iapp',outdate,'.png'));
+
+    figure(5); subplot(1,2,1);
+    plot(freq, powers{2}-powers{1});
+
+    figure(5); subplot(1,2,2);
+    plot(freq, powers{2}-powers{1});
+    
 end
 
-grid on
-suptitle('Periodogram Using FFT')
-xlabel('Frequency (Hz)')
-ylabel('Power/Frequency (dB/Hz)')
-legend('show')
+figure(3); saveas(gcf, strcat('Iapp',outdate,'.png'));
+
+figure(4);
+saveas(gcf, strcat('output_Iapp',outdate,'.png'));
+
+figure(5); suptitle('Periodogram Using FFT')
+saveas(gcf, strcat('spectradiff_Iapp',outdate,'.png'));
+
+%% Find steady state voltages in response to current step
+
+% V = - inv(A)*B*U;
+% V_ = transpose(V);  % column vector of ss voltages over compartments
+
+%% Plot steady state
+% figure(6); clf; hold on;
+% 
+% for i=1:numel(branches)
+%     plot(position{i},V_(branches{i}),'-');
+%     % text(position{i},V_(branches{i})+0.001, cellstr(string(branches{i})),'FontSize',8);
+% end
+% 
+% xlabel('Electrontonic distance from soma'); ylabel('Steady state voltage [mV]');
+% title('Steady-state voltage along cables: Injection into branch '+string(inj_cmprt));
+% saveas(gcf, 'ss_voltage.png');
+
+%% Set injection compartment
+% simulations take a long time so only set 1
+inj_cmprt = 173;
 
 %% Reponse to synaptic input: construct matrix B
 E_AMPA = 0;  % mV
@@ -363,8 +411,8 @@ tp_AMPA = 0.05e3;  % ms -> us
 tp_GABA = 1e3;  % ms -> us
 Gs_AMPA = 40e-12;  % pS -> S
 Gs_GABA = 400e-12;  % pS -> S (10x higher)
-D_AMPA = 1e6;  % channel/cm^2; check
-D_GABA = 1e6;  % channel/cm^2; check
+D_AMPA = 1e8;  % channel/cm^2; check
+D_GABA = 1e8;  % channel/cm^2; check
 
 Gp_AMPA = @(r,dl) Gs_AMPA * D_AMPA * 2*pi*r*dl;
 Gp_GABA = @(r,dl) Gs_GABA * D_GABA * 2*pi*r*dl;
@@ -372,7 +420,7 @@ Gp_GABA = @(r,dl) Gs_GABA * D_GABA * 2*pi*r*dl;
 g_AMPA_ = @(t,r,dl) (t/tp_AMPA).*exp(1-(t/tp_AMPA)).*Gp_AMPA(r,dl);
 g_GABA_ = @(t,r,dl) (t/tp_GABA).*exp(1-(t/tp_GABA)).*Gp_GABA(r,dl);
 
-figure(3); clf;
+figure(50); clf;
 
 % Plot AMPA and GABA synaptic inputs on separate axes
 subplot(2,1,2); hold on;
@@ -398,8 +446,8 @@ legend('show'); title('Synaptic inputs')
 %% Create synaptic input trains
 
 % Specify input times
-AMPA_inputt = randi([0 100],1,1000) .* 1e2;
-%AMPA_inputt = [0] .* 1e2;
+AMPA_inputt = rand(1,1000) .* end_time;
+% AMPA_inputt = [0] .* 1e2;
 GABA_inputt = [] .* 1e-5;
 
 g_AMPA = @(t,inputt,r,dl) ((t-inputt)/tp_AMPA).*exp(1-((t-inputt)/tp_AMPA))...
@@ -415,9 +463,12 @@ for i=1:numel(AMPA_inputt)
     AMPA_cond = AMPA_cond + cond(sim_time);
 end
 
-figure(4); clf; hold on;
+figure(51); clf; hold on;
 plot(sim_time, AMPA_cond);
+plot([AMPA_inputt;AMPA_inputt], [zeros(size(AMPA_inputt));ones(size(AMPA_inputt))*1e-9], 'k-');
+set(gca,'TickDir','out') % draw the tick marks on the outside
 ylabel('Conductance [S]'); xlabel('Time [us]');
+set(gcf,'units','points','position',[100,100,1000,400])
 saveas(gcf, strcat('input',outdate,'.png'));
 
 %% Insert synapses: construct matrix G(t)
@@ -425,7 +476,7 @@ G_ = @(t) make_G_(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_
 G = @(t) G_(t) ./ Cm_matrix;
 
 % check changes in conductance in G matrix
-figure(5); clf; hold on;
+figure(52); clf; hold on;
 for i=1:numel(sim_time)
     t = sim_time(i);
     G_mat = G(t);
@@ -433,12 +484,13 @@ for i=1:numel(sim_time)
 end
 
 ylabel('Conductance changes [S]'); xlabel('Time [us]');
+set(gcf,'units','points','position',[100,100,1000,400])
 saveas(gcf, strcat('g',outdate,'.png'));
 %% Response to synaptic input: construct matrix U(t)
 U = @(t) make_U(t,inj_cmprt,N,radius,length,tp_AMPA,tp_GABA,Gs_AMPA,Gs_GABA,D_AMPA,D_GABA,AMPA_inputt,GABA_inputt);
 
 % check synaptic input train is properly constructed in U
-figure(6); clf; hold on;
+figure(53); clf; hold on;
 for i=1:numel(sim_time)
     t = sim_time(i);
     U_mat = U(t);
@@ -446,6 +498,7 @@ for i=1:numel(sim_time)
 end
 
 ylabel('Conductance [S]'); xlabel('Time [us]');
+set(gcf,'units','points','position',[100,100,1000,400])
 saveas(gcf,strcat('u',outdate,'.png'));
 %% Solve for voltage over time
 
@@ -454,58 +507,54 @@ dVdt = @(t,V) A*V + B*U(t) + G(t)*V;
 
 sim_T = sim_time/(Rm*Cm);
 
-[t,V] = ode23(@(t,V) dVdt(t,V), sim_time, zeros(N,1), options);
+[t,V] = ode23(@(t,V) dVdt(t,V), sim_time, zeros(N,1),options);
 
-figure(7); clf; hold on;
+figure(54); clf; hold on;
 plot(sim_T,V(:,inj_cmprt),'DisplayName','V_{injection}');
 plot(sim_T,V(:,1),'DisplayName','V_{soma}');
 title('Time evolution of V(X,T)');
 xlabel('T'); ylabel('V [mV]'); legend('show');
-saveas(gcf, strcat('output',outdate,'.png'));
-
-% save data
-outfile = strcat('data_',outdate);
-save(outfile, 'AMPA_inputt', 'GABA_inputt', 'V');
+saveas(gcf, strcat('output_syn',outdate,'.png'));
 
 %% spectral analysis
-figure(8); clf; hold on;
-plot(sim_T,V(:,inj_cmprt),'DisplayName','V_{injection}');
-plot(sim_T,V(:,1),'DisplayName','V_{soma}');
-title('Time evolution of V(X,T)');
-xlabel('T'); ylabel('V [mV]'); legend('show');
-saveas(gcf, strcat('output',outdate,'.png'));
-
-% figure(9); clf; hold on;
-% psa = [1, inj_cmprt];
-% for i=1:numel(psa)
-%     ccmprt = psa(i);
-%     x = V(:,ccmprt);
-%     y = fft(x);
-%     n = size(x,1);          % number of samples
-%     f = (0:n-1)*(fs/n);     % frequency range
-%     power = abs(y).^2/n;    % power of the DFT
-%     plot(f,power)
-% end
-% ymax = max(power(power~=max(power)));
-% xlabel('Frequency'); ylabel('Power');
-% xlim([0 10]);
-% ylim([0 0.0001]);
-
 fs = size(sim_time,2);
-figure(13); clf; hold on;
-for i=1:numel(1)
-    % ccmprt = psa(i);
-    x = Iapp_rand;
-    n = size(x,2);
+psa = [inj_cmprt,1];
+figure(55); clf; hold on;
+
+x = AMPA_cond';
+n = size(x,1);
+xdft = fft(x);
+xdft = xdft(1:n/2+1);
+psdx = (1/(fs*n)) * abs(xdft).^2;
+psdx(2:end-1) = 2*psdx(2:end-1);
+freq = 0:fs/n:fs/2;
+subplot(1,2,1)
+plot(freq,10*log10(psdx),'DisplayName', 'Input current')
+
+xlabel('Frequency (Hz)')
+ylabel('Power/Frequency (dB/Hz)')
+
+subplot(1,2,2); hold on;
+for i=1:numel(psa)
+    ccmprt = psa(i);
+    x = v(:,ccmprt);
+    n = size(x,1);
     xdft = fft(x);
     xdft = xdft(1:n/2+1);
     psdx = (1/(fs*n)) * abs(xdft).^2;
     psdx(2:end-1) = 2*psdx(2:end-1);
     freq = 0:fs/n:fs/2;
-    plot(freq,10*log10(psdx))
+    plot(freq,10*log10(psdx),'DisplayName', 'cmprt '+string(ccmprt))
 end
 
 grid on
-title('Periodogram Using FFT')
+suptitle('Periodogram Using FFT')
 xlabel('Frequency (Hz)')
 ylabel('Power/Frequency (dB/Hz)')
+legend('show')
+set(gcf,'units','points','position',[100,100,1000,400])
+saveas(gcf, strcat('spectra_syn',outdate,'.png'));
+
+%% save data
+outfile = strcat('data_',outdate);
+save(outfile, 'sim_time', 'Iapp_rand', 'v', 'AMPA_inputt', 'GABA_inputt', 'AMPA_cond', 'V');
