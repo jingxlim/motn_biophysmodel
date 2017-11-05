@@ -22,6 +22,8 @@ elseif nargin > 7
     error('Too many input arguments');
 end
 
+if isrow(l), l = l'; end;
+
 % num_rows = sum(n);
 lambda = sqrt(Rm/Ri*r/2);
 L = l./lambda;
@@ -50,9 +52,9 @@ for j = 1:n
         end
     end
     if isempty(children)
-        A(j,j) = -(gi(j)+gm(j)).*(1/c(j));        
+        A(j,j) = -(gi(j)+gm(j)).*(1/cm(j));        
     else
-        A(j,j) = -(sum(gi(children))+gi(j)+gm(j)).*(1/c(j));
+        A(j,j) = -(sum(gi(children))+gi(j)+gm(j)).*(1/cm(j));
     end
 end
 
