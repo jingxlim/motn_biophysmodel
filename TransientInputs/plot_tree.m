@@ -20,10 +20,9 @@ soma = find(dend(:,t)==1);
 plot3(dend(soma,x),dend(soma,y),dend(soma,z),'Marker','*','Color','r')
 
 % plotting
-for i = 1:n                         % each compartment
+for i = 1:n                 % each compartment
     j = find(dend(:,p)==i);
-    for n = 1:length(j)                 % each child of compartment
-%         if (j(n) == -1) break; end      % soma
+    for n = 1:length(j)     % each child of compartment
         tempx = [dend(i,x) dend(j(n),x)];
         tempy = [dend(i,y) dend(j(n),y)];
         tempz = [dend(i,z) dend(j(n),z)];

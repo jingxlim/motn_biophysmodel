@@ -22,27 +22,31 @@ elseif nargin > 7
     error('Too many input arguments');
 end
 
-num_rows = sum(n);
+% num_rows = sum(n);
 lambda = sqrt(Rm/Ri*r/2);
 L = l./lambda;
-c = 2.*r.*pi.*L.*Cm; %capacitance of membrane segments
-gi = (1./Ri).*(pi.*r.^2)./L; %axial conductance of segments
-gm = (pi./Rm).*2.*r.*L; %membrane conductance of segments
+cm = 2.*r.*pi.*L.*Cm;           % capacitance of membrane segments
+gi = (1./Ri).*(pi.*r.^2)./L;    % axial conductance of segments
+gm = (pi./Rm).*2.*r.*L;         % membrane conductance of segments
+Er = ones(n,1)*(-70);           % mV
+Ee = ones(n,1)*(60);            % mV
+Ei = Er;                        % mV
 
 % Set up Matrices
-A = zeros(num_rows);
-B = zeros(num_rows);
-for j = 1:num_rows
-    B(j,j) = 1/c(j);
+A = zeros(n);
+B = zeros(n,2*n);
+for j = 1:n
+    B(j,2*j-1) = (1/cm(j))*((Ee(j)-Er(j))/(Ee(j)-Ei(j)));
+    B(j,2*j) = (1/cm(j))*((Ei(j)-Er(j))/(Ee(j)-Ei(j)));
     children = find(parents==j);
     if parents(j) <= 0
         gi(j) = 0;
     end
-    for i = 1:num_rows
+    for i = 1:n
         if ismember(i,children)
-            A(j,i) = gi(i).*B(j,j);
+            A(j,i) = gi(i).*(1/cm(j));
         elseif i==parents(j)
-            A(j,i) = gi(j).*B(j,j);
+            A(j,i) = gi(j).*(1/cm(j));
         end
     end
     if isempty(children)
