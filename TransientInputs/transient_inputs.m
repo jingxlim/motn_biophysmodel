@@ -121,8 +121,8 @@ for i=1:numel(injects)
     Ee = ones(n,1)*(60);            % mV
     Ei = Er;                        % mV
     v_exp = zeros(size(v_exp_s));
-    for i = 1:n
-        v_exp(i,:) = v_exp_s(i,:)*(Ee(i)-Ei(i))+Er(i);
+    for j = 1:n
+        v_exp(j,:) = v_exp_s(j,:)*(Ee(j)-Ei(j))+Er(j);
     end
 
     % plot for various compartments (exp)
@@ -130,6 +130,7 @@ for i=1:numel(injects)
     T = tp./(Rm*Cm);
 
     % numerical (ode)
+    comp = ['cmprt ' num2str(c)];
     figure('Name','Models of the Neuron Project: Topic 3')
     hold on
     plot(T,v_exp(1,:),'m', 'DisplayName', 'Soma')
