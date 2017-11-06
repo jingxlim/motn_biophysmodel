@@ -17,7 +17,11 @@ dend(:,3:6) = dend(:,3:6)./1e4;
 
 %% Jing?
 jing = 1
-if jing    options = odeset('OutputFcn',@odewbar);    end
+if jing
+    options = odeset('OutputFcn',@odewbar);
+else
+    options = odeset();
+end
 
 %% variables
 % comp model
