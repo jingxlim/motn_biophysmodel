@@ -6,17 +6,17 @@
 %% file & plot (not fancy)
 dend = load('whale.txt');
 
-%Remove axon compartments
+% Remove axon compartments
 isaxon = dend(:,2)==2;
 dend(isaxon,:) = [];
 
-%Convert micrometers to centimeters
+% Convert micrometers to centimeters
 dend(:,3:6) = dend(:,3:6)./1e4;
 
 % plot_tree(dend);
 
 %% Jing?
-jing = 1
+jing = 0
 if jing
     options = odeset('OutputFcn',@odewbar);
 else
@@ -54,28 +54,28 @@ for i=1:numel(injects)
     u_step(c) = Iapp;
     v_step_ss = -inv(A)*B*u_step;
 
-    % plot for various compartments (step)
     % change variables to plot
     T = tp./(Rm*Cm);
 
     % numerical (ode)
+    comp = ['cmprt ' num2str(c)];
     figure('Name','Models of the Neuron Project: Topic 3')
     hold on
-    plot(T,v_step(1,:),'m', 'DisplayName', 'Soma')
-    plot(T,v_step(c,:),'g', 'DisplayName', 'cmprt '+string(c))
-    % plot(T,v_step(c-2,:),'k')
-    % plot(T,v_step(c+2,:),'b')
+    plot(T,v_step(1,:)','m', 'DisplayName', 'Soma')
+    plot(T,v_step(c,:)','g', 'DisplayName', comp)
     title('Voltage Given Unit Step Input')
     legend('show')
     xlabel('Time'); ylabel('Voltage (mV)');
+    xlim([0 5])
+    ylim([-0.2 2.5])
     
     max_amp(i)= max(v_step(1,:));
-    saveas(gcf, strcat('output_step_',num2str(c),'.png'))
+    saveas(gcf, strcat('output_step_',comp,'.png'))
 end
 
 figure(); plot(injects, max_amp, 'o-');
 xlabel('Time'); ylabel('Peak voltage (mV)');
-saveas(gcf, strcat('amp_step_',num2str(c),'.png'))
+saveas(gcf, strcat('amp_step_',comp,'.png'))
 
 % ss
 % Note from Simon: I suggest plotting steady state the way I did it for the
@@ -125,18 +125,6 @@ for i=1:numel(injects)
         v_exp(i,:) = v_exp_s(i,:)*(Ee(i)-Ei(i))+Er(i);
     end
 
-    % ss
-    % jx: no steady state for transient inputs
-    % % intialize
-    % u_exp = zeros(2*n,1);
-    % g = zeros(n,1);
-    % % put in values
-    % g(c) = 0.001;
-    % u_exp(1:2:end) = g;
-    % G = diag(-g./C);
-    % % ss voltage calculation
-    % v_exp_ss = -inv(A+G)*B*u_exp;
-
     % plot for various compartments (exp)
     % change variables
     T = tp./(Rm*Cm);
@@ -145,29 +133,19 @@ for i=1:numel(injects)
     figure('Name','Models of the Neuron Project: Topic 3')
     hold on
     plot(T,v_exp(1,:),'m', 'DisplayName', 'Soma')
-    plot(T,v_exp(c,:),'g', 'DisplayName', 'cmprt '+string(c))
+    plot(T,v_exp(c,:),'g', 'DisplayName', comp)
     % plot(t_span,v_exp(c-2,:),'k')
     % plot(t_span,v_exp(c+2,:),'b')
     title('Voltage Given Decaying Exponential w/Time Varying Conductance Change')
     legend('show')
-    xlabel('Time (us)'); ylabel('Voltage (mV)');
+    xlabel('Time'); ylabel('Voltage (mV)');
+    xlim([0 5])
+    ylim([-80 60])
     
-    max_amp_s(i)= max(v_step(1,:));
-    saveas(gcf, strcat('output_exp_',num2str(c),'.png'))
+    max_amp_s(i)= max(v_exp(1,:));
+    saveas(gcf, strcat('output_exp_',comp,'.png'))
 end
 
-figure(); plot(injects, max_amp, 'o-');
+figure(); plot(injects, max_amp_s, 'o-');
 xlabel('Time'); ylabel('Peak voltage (mV)');
-saveas(gcf, strcat('amp_exp_',num2str(c),'.png'))
-
-% ss
-% figure('Name','Models of the Neuron Project: Topic 3')
-% hold on
-% plot(t_span,v_exp_ss(1),'m')
-% plot(t_span,v_exp_ss(c),'g')
-% plot(t_span,v_exp_ss(c-2),'k')
-% plot(t_span,v_exp_ss(c+2),'b')
-% title('SS Voltage Given Decaying Exponential w/Time Varying Conductance Change')
-% legend('Soma','Compartment w/Iapp',...
-%     'Grandparent compartment','Grandchild compartment')
-% xlabel('Time (us)'); ylabel('Voltage (mV)');
+saveas(gcf, strcat('amp_exp_',comp,'.png'))
