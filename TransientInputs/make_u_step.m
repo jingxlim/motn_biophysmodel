@@ -12,5 +12,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [u_step] = make_u_step(t,t_shift,c,n)
 u_step = zeros(n,1);
-u_step(c) = heaviside(t-t_shift);
+
+if t <= t_shift 
+    u = 0;
+else
+    u = 1;
+end
+
+u_step(c) = u;
+
 end

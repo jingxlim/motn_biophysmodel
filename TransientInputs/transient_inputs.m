@@ -5,6 +5,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% file & plot (not fancy)
 dend = load('whale.txt');
+
+%Remove axon compartments
+isaxon = dend(:,2)==2;
+dend(isaxon,:) = [];
+
+%Convert micrometers to centimeters
+dend(:,3:6) = dend(:,3:6)./1e4;
+
 % plot_tree(dend);
 
 %% variables
@@ -16,12 +24,12 @@ l = comp_len(dend);
 
 % transient inputs
 t_n = 100;
-t_span = linspace(1,2000,t_n);
+t_span = linspace(1,1e4,t_n);
 t_shift = 25;
 c = 25;
 
 %% step input
-[A,B,L] = make_compartmental_matrices_simple(Ri,Rm,Cm,dend(:,r),l,n,dend(:,p));
+[A,B] = make_compartmental_matrices_simple(Ri,Rm,Cm,dend(:,r),l,n,dend(:,p));
 
 % numerical (ode)
 dvdt_step = @(t,v) A*v + B*make_u_step(t,t_shift,c,n)*Iapp;
@@ -50,16 +58,18 @@ legend('Soma','Compartment w/Iapp',...
 xlabel('Time'); ylabel('Voltage (mV)');
 
 % ss
-figure('Name','Models of the Neuron Project: Topic 3')
-hold on
-plot(T,v_step_ss(1,:),'m')
-plot(T,v_step_ss(c,:),'g')
-plot(T,v_step_ss(c-2,:),'k')
-plot(T,v_step_ss(c+2,:),'b')
-title('SS Voltage Given Unit Step Input')
-legend('Soma','Compartment w/Iapp',...
-    'Grandparent compartment','Grandchild compartment')
-xlabel('Time'); ylabel('Voltage (mV)');
+% Note from Simon: I suggest plotting steady state the way I did it for the
+% shunting inhibition problem. The plot that was here didn't make sense.
+% figure('Name','Models of the Neuron Project: Topic 3')
+% hold on
+% plot(T,v_step_ss(1),'m')
+% plot(T,v_step_ss(c),'g')
+% plot(T,v_step_ss(c-2),'k')
+% plot(T,v_step_ss(c+2),'b')
+% title('SS Voltage Given Unit Step Input')
+% legend('Soma','Compartment w/Iapp',...
+%     'Grandparent compartment','Grandchild compartment')
+% xlabel('Time'); ylabel('Voltage (mV)');
 
 
 %% not sure what this trash is but delete later if everything else works
@@ -74,11 +84,11 @@ xlabel('Time'); ylabel('Voltage (mV)');
 % end
 
 %% time varying synaptic conductance change
-[A,B,L] = make_compartmental_matrices(Ri,Rm,Cm,dend(:,r),l,n,dend(:,p));
+[A,B,L,C] = make_compartmental_matrices(Ri,Rm,Cm,dend(:,r),l,n,dend(:,p));
 
 % numerical (ode)
 dvdt_exp = @(t,v) A*v + B*make_u_exp(t,t_shift,c,n)...
-    + make_G(make_u_exp(t,t_shift,c,n),Cm)*v;
+    + make_G(make_u_exp(t,t_shift,c,n),C)*v;
 [tp,v_exp_s] = ode23(dvdt_exp, t_span, zeros(n,1));
 v_exp_s = v_exp_s';
 % adjust v_exp (it's actually v*)
@@ -97,7 +107,7 @@ g = zeros(n,1);
 % put in values
 g(c) = 0.001;
 u_exp(1:2:end) = g;
-G = diag(-g./(2*pi*dend(:,r).*L*Cm));
+G = diag(-g./C);
 % ss voltage calculation
 v_exp_ss = -inv(A+G)*B*u_exp;
 
@@ -118,13 +128,13 @@ legend('Soma','Compartment w/Iapp',...
 xlabel('Time (us)'); ylabel('Voltage (mV)');
 
 % ss
-figure('Name','Models of the Neuron Project: Topic 3')
-hold on
-plot(t_span,v_exp_ss(1,:),'m')
-plot(t_span,v_exp_ss(c,:),'g')
-plot(t_span,v_exp_ss(c-2,:),'k')
-plot(t_span,v_exp_ss(c+2,:),'b')
-title('SS Voltage Given Decaying Exponential w/Time Varying Conductance Change')
-legend('Soma','Compartment w/Iapp',...
-    'Grandparent compartment','Grandchild compartment')
-xlabel('Time (us)'); ylabel('Voltage (mV)');
+% figure('Name','Models of the Neuron Project: Topic 3')
+% hold on
+% plot(t_span,v_exp_ss(1),'m')
+% plot(t_span,v_exp_ss(c),'g')
+% plot(t_span,v_exp_ss(c-2),'k')
+% plot(t_span,v_exp_ss(c+2),'b')
+% title('SS Voltage Given Decaying Exponential w/Time Varying Conductance Change')
+% legend('Soma','Compartment w/Iapp',...
+%     'Grandparent compartment','Grandchild compartment')
+% xlabel('Time (us)'); ylabel('Voltage (mV)');

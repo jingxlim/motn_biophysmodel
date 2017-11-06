@@ -3,7 +3,7 @@
 % Outputs: G - nx1 array of conductances
 % Inputs:
 %   u  - nx1 array of input currents
-%   Cm - membrane capacitance
+%   Cm - nx1 vector of the membrane capacitances of the compartments
 %
 % This function returns the conductances of the compartments using the
 % input current vector u. It is used in the function dvdt.

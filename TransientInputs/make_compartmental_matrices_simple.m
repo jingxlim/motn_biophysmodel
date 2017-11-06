@@ -16,7 +16,7 @@
 % 
 % Simon (ty)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [A,B,L] = make_compartmental_matrices_simple(Ri,Rm,Cm,r,l,n,parents)
+function [A,B,L,C] = make_compartmental_matrices_simple(Ri,Rm,Cm,r,l,n,parents)
 %Check inputs
 if nargin < 7
     error('Not enough input arguments');
@@ -29,7 +29,7 @@ if isrow(l), l = l'; end;
 % num_rows = sum(n);
 lambda = sqrt(Rm/Ri*r/2);
 L = l./lambda;
-cm = 2.*r.*pi.*L.*Cm;           % capacitance of membrane segments
+C = 2.*r.*pi.*L.*Cm;           % capacitance of membrane segments
 gi = (1./Ri).*(pi.*r.^2)./L;    % axial conductance of segments
 gm = (pi./Rm).*2.*r.*L;         % membrane conductance of segments
 
@@ -37,7 +37,7 @@ gm = (pi./Rm).*2.*r.*L;         % membrane conductance of segments
 A = zeros(n);
 B = zeros(n);
 for j = 1:n
-    B(j,j) = 1/cm(j);
+    B(j,j) = 1/C(j);
     children = find(parents==j);
     if parents(j) <= 0
         gi(j) = 0;
