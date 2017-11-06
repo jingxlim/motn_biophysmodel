@@ -180,7 +180,46 @@ ylabel('Voltage [mV]');
 legend('Excitation Only','Before','Simultanenous','After');
 title('Inhibited Compartment Voltage Response Over Time');
 
-% %Plot voltage based on distance from the soma
+%Plot Vmax for each condition
+Vmax = [max(V_excite_only)' max(V_b4)' max(V_simul)' max(V_aft)'];
+
+%Plot max voltage based on distance from the soma
+figure; subplot(1,2,1); grid on; hold on;
+for n = 1:num_compartments
+    parent = neuron(n,7);
+    if parent >0
+        Xp = [X(parent) X(n)];
+        Vex = [Vmax(parent,1) Vmax(n,1)];
+        Vb4 = [Vmax(parent,2) Vmax(n,2)];
+        Vsim = [Vmax(parent,3) Vmax(n,3)];
+        Vaft = [Vmax(parent,4) Vmax(n,4)];
+    else
+        Xp = X(n);
+        Vex = Vmax(n,1);
+        Vb4 = Vmax(n,2);
+        Vsim = Vmax(n,3);
+        Vaft = Vmax(n,4);
+    end
+    plot(Xp,Vex,'g.-');
+    plot(Xp,Vb4,'b.-');
+    plot(Xp,Vsim,'k.-');
+    plot(Xp,Vaft,'r.-');
+end
+xlabel('Electrostatic Distance from the Soma');
+ylabel('Voltage [mV]');
+
+subplot(1,2,2); grid on; hold on;
+plot(Vmax(:,1),'g.-');
+plot(Vmax(:,2),'b.-');
+plot(Vmax(:,3),'k.-');
+plot(Vmax(:,4),'r.-');
+xlabel('Compartment Number');
+ylabel('Voltage [mV]');
+
+suptitle('Maximum Voltage Response: Excitatory Input at 25, Inhibitory at 25 (On-path, near)');
+legend('Excitation Only','Before','Simultaneous','After','Location','Best');
+
+% %Plot steady-state voltage based on distance from the soma
 % figure; subplot(1,2,1); grid on; hold on;
 % for n = 1:num_compartments
 %     parent = neuron(n,7);
