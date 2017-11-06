@@ -65,7 +65,7 @@ for i=1:numel(injects)
     legend('show')
     xlabel('Time'); ylabel('Voltage (mV)');
     
-    max_amp(i)= max(v_step(1,:))
+    max_amp(i)= max(v_step(1,:));
     saveas(gcf, strcat('output_step_',num2str(c),'.png'))
 end
 
@@ -148,7 +148,7 @@ for i=1:numel(injects)
     legend('show')
     xlabel('Time (us)'); ylabel('Voltage (mV)');
     
-    max_amp_s(i)= max(v_step(1,:))
+    max_amp_s(i)= max(v_step(1,:));
     saveas(gcf, strcat('output_exp_',num2str(c),'.png'))
 end
 
