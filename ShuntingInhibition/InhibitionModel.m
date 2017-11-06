@@ -16,7 +16,7 @@ Ei = Er; %Mv
 num_compartments = size(neuron,1);
 
 %Convert micrometers to centimeters
-neuron(:,3:6) = neuron(:,3:6)./10000;
+neuron(:,3:6) = neuron(:,3:6)./1e4;
 
 lambda = sqrt((Rm./Ri).*(neuron(:,6)./2));
 
@@ -99,6 +99,8 @@ t_shift_inhibit_b4 = 75;
 t_shift_inhibit_simul = 100;
 t_shift_inhibit_aft = 125;
 
+DvpDt_excite_only = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,[],27,[],num_compartments) + ...
+    make_G(make_u(t,t_shift_excite,[],27,[],num_compartments),C)*vp;
 DvpDt_b4 = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,t_shift_inhibit_b4,27,25,num_compartments) + ...
     make_G(make_u(t,t_shift_excite,t_shift_inhibit_b4,27,25,num_compartments),C)*vp;
 DvpDt_simul = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,t_shift_inhibit_simul,27,25,num_compartments) + ...
@@ -108,6 +110,9 @@ DvpDt_aft = @(t,vp,u,G) A*vp + B*make_u(t,t_shift_excite,t_shift_inhibit_aft,27,
 tp = 0:1:1e4;
 
 v0 = zeros(num_compartments,1);
+[~,Vp_excite_only] = ode23(DvpDt_excite_only,tp,v0); 
+disp('Excitation Only Condition Finished!');
+toc
 [~,Vp_b4] = ode23(DvpDt_b4,tp,v0); 
 disp('Before Condition Finished!');
 toc
@@ -117,6 +122,7 @@ toc
 [~,Vp_aft] = ode23(DvpDt_aft,tp,v0); 
 disp('After Condition Finished!');
 toc
+V_excite_only = zeros(size(Vp_b4));
 V_b4 = zeros(size(Vp_b4));
 V_simul = zeros(size(Vp_simul));
 V_aft = zeros(size(Vp_aft));
@@ -131,6 +137,7 @@ for n = 1:num_compartments
     if p > 0 && neuron(n,2)~=1
         x(n) = x(p) + l(n);
     end
+    V_excite_only(:,n) = Vp_excite_only(:,n)*(Ee(n)-Ei(n))+Er(n);
     V_b4(:,n) = Vp_b4(:,n)*(Ee(n)-Ei(n))+Er(n);
     V_simul(:,n) = Vp_simul(:,n)*(Ee(n)-Ei(n))+Er(n);
     V_aft(:,n) = Vp_aft(:,n)*(Ee(n)-Ei(n))+Er(n);
@@ -142,35 +149,77 @@ T = tp./(Cm*Rm);
 
 %Plot Voltage Response at the Soma
 figure; grid on; hold on;
+plot(T,V_excite_only(:,1),'g.-');
 plot(T,V_b4(:,1),'k.-');
 plot(T,V_simul(:,1),'b.-');
 plot(T,V_aft(:,1),'r.-');
 xlabel('Unitless Time [T]');
 ylabel('Voltage [mV]');
-legend('Before','Simultanenous','After');
+legend('Excitation Only','Before','Simultanenous','After');
 title('Soma Voltage Response Over Time');
 
 %Plot Voltage Response in the Excited Compartment
 figure; grid on; hold on;
+plot(T,V_excite_only(:,27),'g.-');
 plot(T,V_b4(:,27),'k.-');
 plot(T,V_simul(:,27),'b.-');
 plot(T,V_aft(:,27),'r.-');
 xlabel('Unitless Time [T]');
 ylabel('Voltage [mV]');
-legend('Before','Simultanenous','After');
+legend('Excitation Only','Before','Simultanenous','After');
 title('Excited Compartment Voltage Response Over Time');
 
 %Plot Voltage Response in the Inhibited Compartment
 figure; grid on; hold on;
+plot(T,V_excite_only(:,25),'g.-');
 plot(T,V_b4(:,25),'k.-');
 plot(T,V_simul(:,25),'b.-');
 plot(T,V_aft(:,25),'r.-');
 xlabel('Unitless Time [T]');
 ylabel('Voltage [mV]');
-legend('Before','Simultanenous','After');
+legend('Excitation Only','Before','Simultanenous','After');
 title('Inhibited Compartment Voltage Response Over Time');
 
-% %Plot voltage based on distance from the soma
+%Plot Vmax for each condition
+Vmax = [max(V_excite_only)' max(V_b4)' max(V_simul)' max(V_aft)'];
+
+%Plot max voltage based on distance from the soma
+figure; subplot(1,2,1); grid on; hold on;
+for n = 1:num_compartments
+    parent = neuron(n,7);
+    if parent >0
+        Xp = [X(parent) X(n)];
+        Vex = [Vmax(parent,1) Vmax(n,1)];
+        Vb4 = [Vmax(parent,2) Vmax(n,2)];
+        Vsim = [Vmax(parent,3) Vmax(n,3)];
+        Vaft = [Vmax(parent,4) Vmax(n,4)];
+    else
+        Xp = X(n);
+        Vex = Vmax(n,1);
+        Vb4 = Vmax(n,2);
+        Vsim = Vmax(n,3);
+        Vaft = Vmax(n,4);
+    end
+    plot(Xp,Vex,'g.-');
+    plot(Xp,Vb4,'b.-');
+    plot(Xp,Vsim,'k.-');
+    plot(Xp,Vaft,'r.-');
+end
+xlabel('Electrostatic Distance from the Soma');
+ylabel('Voltage [mV]');
+
+subplot(1,2,2); grid on; hold on;
+plot(Vmax(:,1),'g.-');
+plot(Vmax(:,2),'b.-');
+plot(Vmax(:,3),'k.-');
+plot(Vmax(:,4),'r.-');
+xlabel('Compartment Number');
+ylabel('Voltage [mV]');
+
+suptitle('Maximum Voltage Response: Excitatory Input at 25, Inhibitory at 25 (On-path, near)');
+legend('Excitation Only','Before','Simultaneous','After','Location','Best');
+
+% %Plot steady-state voltage based on distance from the soma
 % figure; subplot(1,2,1); grid on; hold on;
 % for n = 1:num_compartments
 %     parent = neuron(n,7);
