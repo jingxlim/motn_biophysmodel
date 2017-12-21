@@ -1,8 +1,10 @@
-# EN.580.439 Models of the Neuron: compartmental modeling
+# Compartmental modeling
+EN.580.439 Models of the Neuron
 
 ## Model details
 - Humpback whale cerebellar stellate cell
 - Neuromorpho: http://neuromorpho.org/neuron_info.jsp?neuron_name=202-2-23nj
+
 ![alt text](202-2-23nj.CNG.gif "morphology")
 
 ## Topics explored
