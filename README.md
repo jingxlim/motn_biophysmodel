@@ -5,7 +5,7 @@ EN.580.439 Models of the Neuron
 - Humpback whale cerebellar stellate cell
 - Neuromorpho: http://neuromorpho.org/neuron_info.jsp?neuron_name=202-2-23nj
 
-![alt text](202-2-23nj.CNG.gif "morphology"){:height="50%" width="50%"}
+<img src="202-2-23nj.CNG.gif" width="50%" height="50%">
 
 ## Topics explored
 - Temporal response at the soma to transient inputs applied at different locations within the dendritic tree
