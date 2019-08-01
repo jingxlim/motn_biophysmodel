@@ -12,7 +12,7 @@ EN.580.439 Models of the Neuron
 
 ## Conclusions
 - As input distance from the soma increases, the voltage response of the soma to that input decreases and slows
-- On-path inhibition is much stronger than off-path, but that effect is blunted by distance between the inhibition and excitation.
-- Inhibition that comes just after excitation has the strongest inhibitory effect.
+- On-path inhibition is much stronger than off-path, but that effect is blunted by distance between the inhibition and excitation
+- Inhibition that comes just after excitation has the strongest inhibitory effect
 - Dendrites can act as a low pass filter
 - Dendritic filtering effects increases as function of distance
